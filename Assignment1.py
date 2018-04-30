@@ -5,6 +5,7 @@ import ogr
 import baumiTools as bt
 '''
 import os
+import fnmatch
 # ####################################### SET TIME-COUNT ###################################################### #
 '''
 starttime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
@@ -18,46 +19,48 @@ SHP = "L:/_SHARED_DATA/CL_MB/tc_sc/_Version02_300m/points_300m_clip.shp"
 outputFile = "L:/_SHARED_DATA/CL_MB/tc_sc/_Version02_300m/points_300m_clip_summary.shp"
 buff_m = 100
 '''
-ass1_footprints = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 2 - IDE, debugger, first scripts/Assignment01_data/Part01_Landsat/"
+footprints = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 2 - IDE, debugger, first scripts/Assignment01_data/Part01_Landsat/"
 # ####################################### PROCESSING ########################################################## #
-#find file names in a directory, regardless of type
+#create empty lists for names of and paths to each of the footprint folders
+foldername_fp_list =[]
+dir_list_fp = []
 
-    #create empty list for paths to each of the footprint folders
-ass1_dir_list_fp = []
+#search through the footprint directory and write them into the footprint paths list
+    #find file names in a directory, regardless of type
+for foldername_fp in os.listdir(footprints):#for current directory, use: ('.')
+    foldername_fp_list.append(foldername_fp)
+    dir_list_fp.append(footprints + foldername_fp)
+print(foldername_fp_list)
+print(dir_list_fp) #list of footprint paths (path_fp)
 
-    #search through the footprint directory and write them into the footprint paths list
-for foldername_fp in os.listdir(ass1_footprints):#for current directory, use: ('.')
-    ass1_dir_list_fp.append(ass1_footprints + foldername_fp)
-print(ass1_dir_list_fp)
+#create empty list for lists of scenes within each footprint
+fp_sc_list = []
 
-    #create empty list for lists of scenes within each footprint
-print(len(ass1_dir_list_fp)) #count footprint folders
-ass1_fp_sc_list = [[] for i in range(9)] #create an empty list of lists to later list scenes per footprint
-print (ass1_fp_sc_list) #test
+#extract a file list from each footprint folder and write it into the empty list of lists
+for path_fp in dir_list_fp:
+    for foldername_fp in foldername_fp_list:
+        foldername_fp =[]
+        foldername_fp.append(os.listdir(path_fp))
+    fp_sc_list.append(foldername_fp[0]) #the 0 is only to get rid of double brackets
+print(fp_sc_list)
+print(len(fp_sc_list))
 
-    #extract a file list from each footprint folder and write it into the empty list of lists
+#count scenes per footprint
+for i in range(len(fp_sc_list)):
+    #if fnmatch.fnmatch(i, 'LC08*'):
+        no= len(fp_sc_list[i])
+        print(no)
 
-list_of_Folders_with_Files = ass1_dir_list_fp
-
-for i in range(len(list_of_Folders_with_Files)):
-    list = os.listdir(list_of_Folders_with_Files[i])
-    ass1_fp_sc_list[i] = list
-    #print(ass1_fp_sc_list[i])
-    #ass1_fp_sc_list[i] = list
-    #print(list)
-
-
-#for path_fp in ass1_dir_list_fp:
-    #for i in range(0,len(ass1_fp_sc_list)):
-       # print(ass1_fp_sc_list[i])
-       # print(i)
-        #print(os.listdir(path_fp))
+#count scenes per sensor for each footprint
+#for i in range(len(fp_sc_list)):
+#    noLC08 = {}
+#    noLE07 = {}
+#    noLT05 = {}
 
 
-        #print(os.listdir(path_fp))
-    #print(ass1_fp_sc_list)
 
-print (ass1_fp_sc_list)
+
+
 ''' #DYSFUNCIONAL
 # find number of subdirectories in a directory, folders only
 
