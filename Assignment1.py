@@ -34,7 +34,7 @@ for foldername_fp in os.listdir(footprints):#for current directory, use: ('.')
     dir_list_fp.append(footprints + foldername_fp)
 #print(foldername_fp_list)
 #print(dir_list_fp) #list of footprint paths (path_fp)
-
+'''
 #count scenes per sensor for each footprint
 for path_fp in dir_list_fp:
     #print(os.listdir(path_fp))
@@ -45,10 +45,31 @@ for path_fp in dir_list_fp:
     L7 = filter(ls7.match, os.listdir(path_fp))
     L8 = filter(ls8.match, os.listdir(path_fp))
     print("For footprint " + str(path_fp[-7:]) + ", there are " + str(len(list(L5))) + " Landsat 5, " + str(len(list(L7))) + " Landsat 7 and " + str(len(list(L8))) + " Landsat 8 scenes.")
+'''
 
 
-# EXERCISE I - 2)
+# EXERCISE I - 2) - a)
+#create a complete path list to each scene irrespective of footprint (list of lists)
+foldername_sc_list =[]
+dir_list_sc = []
+for path_fp in dir_list_fp:
+    for foldername_sc in os.listdir(path_fp):
+        dir_list_sc.append(path_fp + "/" + foldername_sc)
+#print (dir_list_sc)
 
+#check maximum number of files per scene directory
+no_files = []
+for scene_dir in dir_list_sc:
+    file_list = os.listdir(scene_dir)
+    #print (file_list)
+    no_files = len(file_list)
+    #print(no_files)
+    #ls5 = re.compile("^LT05")
+    #ls7 = re.compile("^LE07")
+    #ls8 = re.compile("^LC08")
+    #L5 = filter(ls5.match, scene_dir)
+    #L7 = filter(ls7.match, scene_dir)
+    #L8 = filter(ls8.match, scene_dir)
 
 
 
