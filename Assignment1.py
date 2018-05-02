@@ -74,31 +74,145 @@ for scene_dir in dir_list_sc:
 #print(dir_list_L8)
 
 #check maximum number of files per scene directory
-no_files_L5 = []
-no_files_L7 = []
-no_files_L8 = []
+no_file_L5 = []
+no_file_L7 = []
+no_file_L8 = []
 for scene_dir in dir_list_L5:
-    no_files_L5.append(len(os.listdir(scene_dir)))
-print("The maximum number of files in a Landsat 5 scene is " + str(max(no_files_L5)) + " and the minimum is " + str(min(no_files_L5)) + ".") #no files missing anywhere
+    no_file_L5.append(len(os.listdir(scene_dir)))
+#print("The maximum number of files in a Landsat 5 scene is " + str(max(no_file_L5)) + " and the minimum is " + str(min(no_file_L5)) + ".") #no files missing anywhere
 for scene_dir in dir_list_L7:
-    no_files_L7.append(len(os.listdir(scene_dir)))
-print("The maximum number of files in a Landsat 7 scene is " + str(max(no_files_L7)) + " and the minimum is " + str(min(no_files_L7)) + ".") #files missing somewhere
+    no_file_L7.append(len(os.listdir(scene_dir)))
+#print("The maximum number of files in a Landsat 7 scene is " + str(max(no_file_L7)) + " and the minimum is " + str(min(no_file_L7)) + ".") #files missing somewhere
 for scene_dir in dir_list_L8:
-    no_files_L8.append(len(os.listdir(scene_dir)))
-print("The maximum number of files in a Landsat 8 scene is " + str(max(no_files_L8)) + " and the minimum is " + str(min(no_files_L8)) + ".") #files missing somewhere
+    no_file_L8.append(len(os.listdir(scene_dir)))
+#print("The maximum number of files in a Landsat 8 scene is " + str(max(no_file_L8)) + " and the minimum is " + str(min(no_file_L8)) + ".") #files missing somewhere
 
 #count the number of scenes with files missing
-no_corrupt_sc_L7 = (sum(i < (max(no_files_L7)) for i in no_files_L7))
-print("There are " + str(no_corrupt_sc_L7) + " Landsat 7 scene(s) with files missing.")
-no_corrupt_sc_L8 = (sum(i < (max(no_files_L8)) for i in no_files_L8))
-print("There are " + str(no_corrupt_sc_L8) + " Landsat 8 scene(s) with files missing.")
+no_corrupt_sc_L7 = (sum(i < (max(no_file_L7)) for i in no_file_L7))
+#print("There are " + str(no_corrupt_sc_L7) + " Landsat 7 scene(s) with files missing.")
+no_corrupt_sc_L8 = (sum(i < (max(no_file_L8)) for i in no_file_L8))
+#print("There are " + str(no_corrupt_sc_L8) + " Landsat 8 scene(s) with files missing.")
 
+
+# EXERCISE I - 2) - a)
+#create a file list for each sensor to compare with actual files present
+#print((os.listdir(dir_list_L5[1])[1])[40:]) #check were relevant string ending starts --> 40
+#print((os.listdir(dir_list_L7[1])[1])[40:])
+#print((os.listdir(dir_list_L8[1])[1])[40:])
+file_endings_L5 = [] #empty text_file to write the file list
+file_endings_L7 = []
+file_endings_L8 = []
+for scene in dir_list_L5:
+    #print((os.listdir(scene)))
+    for file in os.listdir(scene):
+        file_endings_L5.append((file[40:]))
+file_endings_L5 = set(file_endings_L5)
+#print(file_endings_L5) #file list for L5
+#print((len(file_endings_L5))==(max(no_file_L5)))#check by comparing with maximum number of files per scene for L5 --> TRUE
+for scene in dir_list_L7:
+    #print((os.listdir(scene)))
+    for file in os.listdir(scene):
+        file_endings_L7.append((file[40:]))
+file_endings_L7 = set(file_endings_L7)
+#print(file_endings_L7) #file list for L7
+#print((len(file_endings_L7))==(max(no_file_L7)))#check by comparing with maximum number of files per scene for L7 --> TRUE
+for scene in dir_list_L8:
+    #print((os.listdir(scene)))
+    for file in os.listdir(scene):
+        file_endings_L8.append((file[40:]))
+file_endings_L8 = set(file_endings_L8)
+#print(file_endings_L8) #file list for L8
+#print((len(list(file_endings_L8)))==(max(no_file_L8)))#check by comparing with maximum number of files per scene for L8 --> TRUE
+
+#create template files list for each sensor and lists of actual files present
+files_L5=[] #for template list
+files_L7=[]
+files_L8=[]
+actual_files_L5 = [] #for actually existing files
+actual_files_L7 = []
+actual_files_L8 = []
+for scene_path in dir_list_L5:
+    files_scene = (os.listdir(scene_path)) #list of actual files present per scene
+    scene_name = files_scene[1][:40] #gather the prefix for the endings
+    actual_files_L5 = actual_files_L5 + (files_scene) #store each existing file in a L5 file list, add to list with each iteration
+    for ending in file_endings_L5:
+        files_L5.append(((str(scene_name))+ ending)) #creates template list of all files that should exist
+for scene_path in dir_list_L7:
+    files_scene = (os.listdir(scene_path)) #list of actual files present per scene
+    scene_name = files_scene[1][:40] #gather the prefix for the endings
+    actual_files_L7 = actual_files_L7 + (files_scene) #store each existing file in a L5 file list, add to list with each iteration
+    for ending in file_endings_L7:
+        files_L7.append(((str(scene_name))+ ending)) #creates template list of all files that should exist
+for scene_path in dir_list_L8:
+    files_scene = (os.listdir(scene_path)) #list of actual files present per scene
+    scene_name = files_scene[1][:40] #gather the prefix for the endings
+    actual_files_L8 = actual_files_L8 + (files_scene) #store each existing file in a L5 file list, add to list with each iteration
+    for ending in file_endings_L8:
+        files_L8.append(((str(scene_name))+ ending)) #creates template list of all files that should exist
+
+# check difference between template and actual file lists and write the missing files into a txt file
+text_file_filename = [] #empty list for corrupt files
+text_file = [] #empty list for corrupt file paths
+diff5 = lambda files_L5,actual_files_L5: [x for x in files_L5 if x not in actual_files_L5]
+diff7 = lambda files_L7,actual_files_L7: [x for x in files_L7 if x not in actual_files_L7]
+diff8 = lambda files_L8,actual_files_L8: [x for x in files_L8 if x not in actual_files_L8]
+
+text_file_filename.extend(diff5(files_L5,actual_files_L5)+ diff7(files_L7,actual_files_L7)+ diff8(files_L8,actual_files_L8))
+
+for element in text_file_filename:
+    dir_name = element.replace("_","") #no underscore in directory name
+    print(dir_name)
+    dir_name = dir_name.replace("L1TP", "") #product identification should not go into directory name
+    print(dir_name)
+    dir_name = dir_name[:30] #shorter directory name
+    print(dir_name)
+    dir_name = dir_name.replace(dir_name[18:26], "")#shorter directory name
+    print(dir_name)
+    footprint_name= element[4:10]
+    footprint_name = footprint_name[:3] + "_" + footprint_name[3:]
+    element = (footprints + footprint_name + "/" + dir_name + "/" + element) #build element path
+    text_file.append(element)
+print(text_file[1])
+
+# continue: _L1_TP_ somehow still in den string after footprints
+
+
+#for item in text_file:
+#  text_file.write("%s\n" % item)
+
+#values = ['1', '2', '3']
+
+#with open("file.txt", "w") as output:
+ #   output.write(str(values))
+
+
+
+#list(set(A)-set(B))
+
+#for file in files_L5:
+ #   if (actual_files_L5.sort() == files_L5.sort())== False:
+  #       text_file.append(file)
+# else:
+ #        continue
+
+#print(files_L5)
+#print(actual_files_L5)
+#print(text_file)
 
 '''
-dir_to_search = '/some/path/to/images/' #dir_list_sc
-files_in_dir = glob.glob("{}{}".format(dir_to_search,'*.jpg'))
-list_of_files = ['1.jpg','2.jpg','3.jpg']
-missing_files = [x for x in list_of_files if x not in files_in_dir]
+def remove_duplicates():
+    t = ['a', 'b', 'c', 'd']
+    t2 = ['a', 'c', 'd']
+    for t in t2:
+        t.append(t.remove())
+    return t
+    
+if some condition:
+         # break the inner loop
+         break
+   else:
+      # will be called if the previous loop did not end with a `break`
+      continue
 '''
 
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
@@ -162,3 +276,6 @@ print(countStringStart(mylist))
 #for i in range(len(fp_sc_list)):
 #        no= len(fp_sc_list[i])
 #        print(no)
+
+#s[:4] + '-' + s[4:] #insert a char into a string
+#x.extend(y+z)#merging multiple lists at once, by adding each element, so it doesn't become a list of lists
