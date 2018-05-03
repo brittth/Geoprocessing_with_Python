@@ -22,6 +22,7 @@ outputFile = "L:/_SHARED_DATA/CL_MB/tc_sc/_Version02_300m/points_300m_clip_summa
 buff_m = 100
 '''
 footprints = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 2 - IDE, debugger, first scripts/Assignment01_data/Part01_Landsat/"
+output_path = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 2 - IDE, debugger, first scripts/"
 # ####################################### PROCESSING ########################################################## #
 # EXERCISE I - 1)
 #create empty lists for names of and paths to each of the footprint folders
@@ -150,7 +151,7 @@ for scene_path in dir_list_L8:
     for ending in file_endings_L8:
         files_L8.append(((str(scene_name))+ ending)) #creates template list of all files that should exist
 
-# check difference between template and actual file lists and write the missing files into a txt file
+# check difference between template and actual file lists
 text_file_filename = [] #empty list for corrupt files
 text_file = [] #empty list for corrupt file paths
 diff5 = lambda files_L5,actual_files_L5: [x for x in files_L5 if x not in actual_files_L5]
@@ -159,61 +160,27 @@ diff8 = lambda files_L8,actual_files_L8: [x for x in files_L8 if x not in actual
 
 text_file_filename.extend(diff5(files_L5,actual_files_L5)+ diff7(files_L7,actual_files_L7)+ diff8(files_L8,actual_files_L8))
 
-for element in text_file_filename:
+for element in text_file_filename: #reconstructing path name (footprint/scene/file) from the file name
     dir_name = element.replace("_","") #no underscore in directory name
-    print(dir_name)
     dir_name = dir_name.replace("L1TP", "") #product identification should not go into directory name
-    print(dir_name)
     dir_name = dir_name[:30] #shorter directory name
-    print(dir_name)
     dir_name = dir_name.replace(dir_name[18:26], "")#shorter directory name
-    print(dir_name)
-    footprint_name= element[4:10]
+    footprint_name= dir_name[4:10]
     footprint_name = footprint_name[:3] + "_" + footprint_name[3:]
     element = (footprints + footprint_name + "/" + dir_name + "/" + element) #build element path
     text_file.append(element)
-print(text_file[1])
+print(text_file)
 
-# continue: _L1_TP_ somehow still in den string after footprints
-
-
-#for item in text_file:
-#  text_file.write("%s\n" % item)
-
-#values = ['1', '2', '3']
-
-#with open("file.txt", "w") as output:
- #   output.write(str(values))
+#write the missing files into a txt file
+outF = open("text_file.txt", "w") #create new txt file
+for line in text_file: # write list into txt file
+  outF.write(line)
+  outF.write("\n")
+outF.close()
 
 
 
-#list(set(A)-set(B))
-
-#for file in files_L5:
- #   if (actual_files_L5.sort() == files_L5.sort())== False:
-  #       text_file.append(file)
-# else:
- #        continue
-
-#print(files_L5)
-#print(actual_files_L5)
-#print(text_file)
-
-'''
-def remove_duplicates():
-    t = ['a', 'b', 'c', 'd']
-    t2 = ['a', 'c', 'd']
-    for t in t2:
-        t.append(t.remove())
-    return t
-    
-if some condition:
-         # break the inner loop
-         break
-   else:
-      # will be called if the previous loop did not end with a `break`
-      continue
-'''
+# EXERCISE II - 1)
 
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
 '''
@@ -279,3 +246,12 @@ print(countStringStart(mylist))
 
 #s[:4] + '-' + s[4:] #insert a char into a string
 #x.extend(y+z)#merging multiple lists at once, by adding each element, so it doesn't become a list of lists
+
+'''
+def remove_duplicates():
+    t = ['a', 'b', 'c', 'd']
+    t2 = ['a', 'c', 'd']
+    for t in t2:
+        t.append(t.remove())
+    return t 
+'''
