@@ -22,8 +22,10 @@ outputFile = "L:/_SHARED_DATA/CL_MB/tc_sc/_Version02_300m/points_300m_clip_summa
 buff_m = 100
 '''
 footprints = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 2 - IDE, debugger, first scripts/Assignment01_data/Part01_Landsat/"
+GIS_path = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 2 - IDE, debugger, first scripts/Assignment01_data/Part02_GIS-Files"
 output_path = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 2 - IDE, debugger, first scripts/"
 # ####################################### PROCESSING ########################################################## #
+'''
 # EXERCISE I - 1)
 #create empty lists for names of and paths to each of the footprint folders
 foldername_fp_list =[]
@@ -177,10 +179,48 @@ for line in text_file: # write list into txt file
   outF.write(line)
   outF.write("\n")
 outF.close()
+'''
 
 
 
 # EXERCISE II - 1)
+
+#separate vector from raster data
+GIS_files_with_endings = os.listdir(GIS_path)
+#print(GIS_files_with_endings)
+vector_endings = []
+raster_endings = []
+
+#find typical endings knowing only shp for vector and tif for raster
+GIS_files_without_endings = []
+GIS_files_endings = []
+
+vector_files_without_endings =[]
+vector_files_endings =[]
+vector_files = []
+for file in GIS_files_with_endings:
+    if "shp" in file:
+        vector_endings.append(file)
+    vector_files_without_endings.append(file.split(".")[0]) #only vector layer names (of those where the shp exists)
+vector_files.append(set(vector_files_without_endings)) #the above list reduced to only unique names
+#find the elements of vector_files in GIS_files to get other file endings
+    #vector_files_endings.append(file.split(".")) #only the endings
+#reduce the list to unique endings and overwrite vector_endings
+    #vector_endings = set(vector_endings)
+
+#do the same for raster
+raster_files_without_endings =[]
+raster_files_endings =[]
+raster_files = []
+for file in GIS_files_with_endings:
+    if "tif" in file:
+        raster_endings.append(file)
+    raster_files_without_endings.append(file.split(".")[0]) #only vector layer names (of those where the shp exists)
+raster_files.append(set(raster_files_without_endings)) #the above list reduced to only unique names
+#...
+
+#print(vector_endings)
+#print(raster_endings)
 
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
 '''
@@ -255,3 +295,20 @@ def remove_duplicates():
         t.append(t.remove())
     return t 
 '''
+''' #Splitting a Path into All of Its Parts, not tested but might be useful
+import os, sys
+def splitall(path):
+    allparts = []
+    while 1:
+        parts = os.path.split(path)
+        if parts[0] == path:  # sentinel for absolute paths
+            allparts.insert(0, parts[0])
+            break
+        elif parts[1] == path: # sentinel for relative paths
+            allparts.insert(0, parts[1])
+            break
+        else:
+            path = parts[0]
+            allparts.insert(0, parts[1])
+    return allparts
+    '''
