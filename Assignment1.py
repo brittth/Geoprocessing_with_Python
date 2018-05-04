@@ -7,6 +7,7 @@ import baumiTools as bt
 import os
 import re
 import glob
+from collections import Counter
 
 # ####################################### SET TIME-COUNT ###################################################### #
 '''
@@ -184,43 +185,90 @@ outF.close()
 
 
 # EXERCISE II - 1)
-
 #separate vector from raster data
-GIS_files_with_endings = os.listdir(GIS_path)
-#print(GIS_files_with_endings)
-vector_endings = []
-raster_endings = []
+GIS_files = os.listdir(GIS_path)
 
 #find typical endings knowing only shp for vector and tif for raster
-GIS_files_without_endings = []
-GIS_files_endings = []
+vector_files =[]            #file names with endings
+vector_files_names =[]      #file names without endings
+vector_endings = []
 
-vector_files_without_endings =[]
-vector_files_endings =[]
-vector_files = []
-for file in GIS_files_with_endings:
-    if "shp" in file:
-        vector_endings.append(file)
-    vector_files_without_endings.append(file.split(".")[0]) #only vector layer names (of those where the shp exists)
-vector_files.append(set(vector_files_without_endings)) #the above list reduced to only unique names
-#find the elements of vector_files in GIS_files to get other file endings
-    #vector_files_endings.append(file.split(".")) #only the endings
-#reduce the list to unique endings and overwrite vector_endings
-    #vector_endings = set(vector_endings)
+raster_files =[]            #file names with endings
+raster_files_names =[]      #file names without endings
+raster_endings = []
 
-#do the same for raster
-raster_files_without_endings =[]
-raster_files_endings =[]
-raster_files = []
-for file in GIS_files_with_endings:
-    if "tif" in file:
-        raster_endings.append(file)
-    raster_files_without_endings.append(file.split(".")[0]) #only vector layer names (of those where the shp exists)
-raster_files.append(set(raster_files_without_endings)) #the above list reduced to only unique names
-#...
+for file in GIS_files:              #for each GIS file
+    if ".shp" in file:              #look for the ones containing ".shp"
+        vector_files_names.append(file.split(".")[0]) #list only vector file names (of those where the shp exists) without ending
 
-#print(vector_endings)
-#print(raster_endings)
+for file in vector_files_names: #find the elements of vector_files in GIS_files to get other file endings
+    for long_file in GIS_files:
+        if file in long_file:
+            vector_files.append(long_file.split(".")) #split strings at "."
+
+for list in vector_files:   #merge multi-part-endings
+    list.pop(0)# remove first element on each list, i.e. file name
+    vector_endings.append("." +'.'.join(list))
+print("Each vector layer should be made up by the following file types: " + str(set(vector_endings)))
+
+    #THE SAME FOR RASTER
+for file in GIS_files:              #for each GIS file
+    if ".tif" in file:              #look for the ones containing ".shp"
+        raster_files_names.append(file.split(".")[0]) #list only raster file names (of those where the tif exists) without ending
+
+for file in raster_files_names: #find the elements of raster_files in GIS_files to get other file endings
+    for long_file in GIS_files:
+        if file in long_file:
+            raster_files.append(long_file.split(".")) #split strings at "."
+
+for list in raster_files:   #merge multi-part-endings
+    list.pop(0)# remove first element on each list, i.e. file name
+    raster_endings.append("." +'.'.join(list))
+print("Each raster layer should be made up by the following file types: " + str(set(raster_endings)))
+
+#list all vector files and all raster files
+vector_existing_files = []
+vector_existing_files_name = []
+vector_layers = []          #unique layer names
+
+raster_existing_files = []
+raster_existing_files_name = []
+raster_layers = []          #unique layer names
+
+for ending in set(vector_endings):  #write all files with the typical vector file endings into list, clip ending tocreate unique layer name list
+    for file in GIS_files:
+        if ending in file:
+            vector_existing_files.append(file) #MISTAKE SOMEWHERE HERE
+            vector_existing_files_name.append(file.split(".")[0])
+vector_existing_files = set(vector_existing_files) #get rid of duplicates due to multi-part-endings
+vector_layers = set(vector_existing_files_name)
+#print("Vector layers: " + str(vector_layers))
+print("There are " + str(len(vector_layers)) + " vector layer(s) in this folder.") #should be 16!!!
+
+for ending in set(raster_endings):  #write all files with the typical raster file endings into list, clip ending tocreate unique layer name list
+    for file in GIS_files:
+        if ending in file:
+            raster_existing_files.append(file)
+            raster_existing_files_name.append(file.split(".")[0])
+raster_existing_files = set(raster_existing_files)#get rid of duplicates due to multi-part-endings
+raster_layers = set(raster_existing_files_name)
+#print("Raster layers: " + str(raster_layers))
+#print("There are " + str(len(raster_layers)) + " raster layer(s) in this folder.")
+
+
+
+# EXERCISE II - 2)
+# compare number of existing files to the number of files that should exist
+    #"set()" is used to get rid of duplicates,e.g. vector/raster_existing_files have duplicates due to multi-part-ending that where identified multiple times
+#print("There are " + str((len(vector_layers)) * (len(set(vector_endings))) - (len(vector_existing_files))) + " incomplete vector layer(s).")
+#print("There are " + str((len(raster_layers)) * (len(set(raster_endings))) - (len(raster_existing_files))) + " incomplete raster layer(s).")
+
+#print(len(vector_existing_files))
+#print(Counter(vector_existing_files))
+#print(Counter(raster_existing_files))
+
+#print("There are " + str((len(vector_layers)) * (len(set(vector_endings)))))
+#print((len(vector_layers))*(len(set(vector_endings))))
 
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
 '''
