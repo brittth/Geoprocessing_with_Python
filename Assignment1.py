@@ -189,8 +189,8 @@ outF.close()
 GIS_files = os.listdir(GIS_path)
 
 #find typical endings knowing only shp for vector and tif for raster
-vector_files =[]            #file names with endings
-vector_files_names =[]      #file names without endings
+vector_files_shp =[]            #file names with endings
+vector_files_shp_names =[]      #file names without endings
 vector_endings = []
 
 raster_files =[]            #file names with endings
@@ -199,14 +199,14 @@ raster_endings = []
 
 for file in GIS_files:              #for each GIS file
     if ".shp" in file:              #look for the ones containing ".shp"
-        vector_files_names.append(file.split(".")[0]) #list only vector file names (of those where the shp exists) without ending
+        vector_files_shp_names.append(file.split(".")[0]) #list only vector file names (of those where the shp exists) without ending
 
-for file in vector_files_names: #find the elements of vector_files in GIS_files to get other file endings
+for file in vector_files_shp_names: #find the elements of vector_files_shp in GIS_files to get other file endings
     for long_file in GIS_files:
         if file in long_file:
-            vector_files.append(long_file.split(".")) #split strings at "."
+            vector_files_shp.append(long_file.split(".")) #split strings at "."
 
-for list in vector_files:   #merge multi-part-endings
+for list in vector_files_shp:   #merge multi-part-endings
     list.pop(0)# remove first element on each list, i.e. file name
     vector_endings.append("." +'.'.join(list))
 print("Each vector layer should be made up by the following file types: " + str(set(vector_endings)))
@@ -238,8 +238,12 @@ raster_layers = []          #unique layer names
 for ending in set(vector_endings):  #write all files with the typical vector file endings into list, clip ending tocreate unique layer name list
     for file in GIS_files:
         if ending in file:
-            vector_existing_files.append(file) #MISTAKE SOMEWHERE HERE
-            vector_existing_files_name.append(file.split(".")[0])
+            vector_existing_files.append(file)
+            if ".tif.vat.dbf" in file:  # avoid counting ".tif.vat.dbf" (raster ending) as ".dbf" (vector ending)
+                vector_existing_files.remove(file)
+for file in vector_existing_files:
+    vector_existing_files_name.append(file.split(".")[0])
+
 vector_existing_files = set(vector_existing_files) #get rid of duplicates due to multi-part-endings
 vector_layers = set(vector_existing_files_name)
 #print("Vector layers: " + str(vector_layers))
@@ -253,22 +257,48 @@ for ending in set(raster_endings):  #write all files with the typical raster fil
 raster_existing_files = set(raster_existing_files)#get rid of duplicates due to multi-part-endings
 raster_layers = set(raster_existing_files_name)
 #print("Raster layers: " + str(raster_layers))
-#print("There are " + str(len(raster_layers)) + " raster layer(s) in this folder.")
+print("There are " + str(len(raster_layers)) + " raster layer(s) in this folder.")
 
 
 
 # EXERCISE II - 2)
 # compare number of existing files to the number of files that should exist
-    #"set()" is used to get rid of duplicates,e.g. vector/raster_existing_files have duplicates due to multi-part-ending that where identified multiple times
-#print("There are " + str((len(vector_layers)) * (len(set(vector_endings))) - (len(vector_existing_files))) + " incomplete vector layer(s).")
-#print("There are " + str((len(raster_layers)) * (len(set(raster_endings))) - (len(raster_existing_files))) + " incomplete raster layer(s).")
+vector_files = [] #complete list of vector files that should exist
+for layer in vector_layers:
+    for ending in set(vector_endings):
+        vector_files.append(layer + ending)
 
-#print(len(vector_existing_files))
-#print(Counter(vector_existing_files))
-#print(Counter(raster_existing_files))
+diff_v_list=[] #list of missing files
+diff_v_list_name = [] #list of incomplete layers
+diff_v = lambda vector_files,vector_existing_files: [x for x in vector_files if x not in vector_existing_files]
+diff_v_list.extend(diff_v(vector_files,vector_existing_files)) #missing files written into list
+for file in diff_v_list:
+    diff_v_list_name.append(file.split(".")[0])#endings removed to only get the layers
+diff_v_list_name = set(diff_v_list_name)# reduced to unique layer names
 
-#print("There are " + str((len(vector_layers)) * (len(set(vector_endings)))))
-#print((len(vector_layers))*(len(set(vector_endings))))
+# "set()" for removing duplicates from multiple identification of multi-part-endings
+print("There are " + str((len(vector_layers)) * (len(set(vector_endings))) - (len(vector_existing_files))) + " file(s) missing from "
+      + str(len(diff_v_list_name)) + " vector layer(s).")
+print("The incomplete vector layers are: " + str(diff_v_list_name))
+
+    #SAME FOR RASTER
+raster_files = [] #complete list of raster files that should exist
+for layer in raster_layers:
+    for ending in set(raster_endings):
+        raster_files.append(layer + ending)
+
+diff_r_list=[] #list of missing files
+diff_r_list_name = [] #list of incomplete layers
+diff_r = lambda raster_files,raster_existing_files: [x for x in raster_files if x not in raster_existing_files]
+diff_r_list.extend(diff_r(raster_files,raster_existing_files)) #missing files written into list
+for file in diff_r_list:
+    diff_r_list_name.append(file.split(".")[0])#endings removed to only get the layers
+diff_r_list_name = set(diff_r_list_name)# reduced to unique layer names
+
+# "set()" for removing duplicates from multiple identification of multi-part-endings
+print("There are " + str((len(raster_layers)) * (len(set(raster_endings))) - (len(raster_existing_files))) + " file(s) missing from "
+      + str(len(diff_r_list_name)) + " raster layer(s).")
+print("The incomplete raster layers are: " + str(diff_r_list_name))
 
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
 '''
