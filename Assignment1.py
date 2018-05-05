@@ -1,33 +1,28 @@
 # ####################################### LOAD REQUIRED LIBRARIES ############################################# #
 '''
-import time
 import ogr
 import baumiTools as bt
 '''
+import time
 import os
 import re
-import glob
-from collections import Counter
 
 # ####################################### SET TIME-COUNT ###################################################### #
-'''
+
 starttime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
 print("--------------------------------------------------------")
 print("Starting process, time: " + starttime)
 print("")
-'''
+
 # ####################################### FOLDER PATHS & global variables ##################################### #
-'''
-SHP = "L:/_SHARED_DATA/CL_MB/tc_sc/_Version02_300m/points_300m_clip.shp"
-outputFile = "L:/_SHARED_DATA/CL_MB/tc_sc/_Version02_300m/points_300m_clip_summary.shp"
-buff_m = 100
-'''
+
 footprints = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 2 - IDE, debugger, first scripts/Assignment01_data/Part01_Landsat/"
 GIS_path = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 2 - IDE, debugger, first scripts/Assignment01_data/Part02_GIS-Files"
 output_path = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 2 - IDE, debugger, first scripts/"
+
 # ####################################### PROCESSING ########################################################## #
-'''
 # EXERCISE I - 1)
+print("QUESTION 1\n")
 #create empty lists for names of and paths to each of the footprint folders
 foldername_fp_list =[]
 dir_list_fp = []
@@ -43,17 +38,20 @@ for foldername_fp in os.listdir(footprints):#for current directory, use: ('.')
 #count scenes per sensor for each footprint
 for path_fp in dir_list_fp:
     #print(os.listdir(path_fp))
+    ls4 = re.compile("^LT04")
     ls5 = re.compile("^LT05")
     ls7 = re.compile("^LE07")
     ls8 = re.compile("^LC08")
+    L4 = filter(ls4.match, os.listdir(path_fp))
     L5 = filter(ls5.match, os.listdir(path_fp))
     L7 = filter(ls7.match, os.listdir(path_fp))
     L8 = filter(ls8.match, os.listdir(path_fp))
-    #print("For footprint " + str(path_fp[-7:]) + ", there are " + str(len(list(L5))) + " Landsat 5, " + str(len(list(L7))) + " Landsat 7 and " + str(len(list(L8))) + " Landsat 8 scenes.")
+    print("For footprint " + str(path_fp[-7:]) + ", there are " + str(len(list(L4))) + " Landsat 4, " + str(len(list(L5))) + " Landsat 5, " + str(len(list(L7))) + " Landsat 7 and " + str(len(list(L8))) + " Landsat 8 scenes.")
 
 
 
 # EXERCISE I - 2) - a)
+print("\nQUESTION 2\n")
 #create a complete path list to each scene irrespective of footprint (list of lists)
 foldername_sc_list =[]
 dir_list_sc = []
@@ -63,24 +61,32 @@ for path_fp in dir_list_fp:
 #print (dir_list_sc)
 
 #separate the scene path list into different lists depending according to their sensor
+dir_list_L4 = []
 dir_list_L5 = []
 dir_list_L7 = []
 dir_list_L8 = []
 for scene_dir in dir_list_sc:
+    if "LT04" in scene_dir:
+        dir_list_L4.append(scene_dir)
     if "LT05" in scene_dir:
         dir_list_L5.append(scene_dir)
     if "LE07" in scene_dir:
         dir_list_L7.append(scene_dir)
     if "LC08" in scene_dir:
         dir_list_L8.append(scene_dir)
+#print(dir_list_L4)
 #print(dir_list_L5)
 #print(dir_list_L7)
 #print(dir_list_L8)
 
 #check maximum number of files per scene directory
+no_file_L4 = []
 no_file_L5 = []
 no_file_L7 = []
 no_file_L8 = []
+for scene_dir in dir_list_L4:
+    no_file_L4.append(len(os.listdir(scene_dir)))
+#print("The maximum number of files in a Landsat 4 scene is " + str(max(no_file_L4)) + " and the minimum is " + str(min(no_file_L4)) + ".") #files missing somewhere
 for scene_dir in dir_list_L5:
     no_file_L5.append(len(os.listdir(scene_dir)))
 #print("The maximum number of files in a Landsat 5 scene is " + str(max(no_file_L5)) + " and the minimum is " + str(min(no_file_L5)) + ".") #no files missing anywhere
@@ -92,20 +98,34 @@ for scene_dir in dir_list_L8:
 #print("The maximum number of files in a Landsat 8 scene is " + str(max(no_file_L8)) + " and the minimum is " + str(min(no_file_L8)) + ".") #files missing somewhere
 
 #count the number of scenes with files missing
+no_corrupt_sc_L4 = (sum(i < (max(no_file_L4)) for i in no_file_L4))
+print("There are " + str(no_corrupt_sc_L4) + " Landsat 4 scene(s) with files missing.")
+no_corrupt_sc_L5 = (sum(i < (max(no_file_L5)) for i in no_file_L5))
+print("There are " + str(no_corrupt_sc_L5) + " Landsat 5 scene(s) with files missing.")
 no_corrupt_sc_L7 = (sum(i < (max(no_file_L7)) for i in no_file_L7))
-#print("There are " + str(no_corrupt_sc_L7) + " Landsat 7 scene(s) with files missing.")
+print("There are " + str(no_corrupt_sc_L7) + " Landsat 7 scene(s) with files missing.")
 no_corrupt_sc_L8 = (sum(i < (max(no_file_L8)) for i in no_file_L8))
-#print("There are " + str(no_corrupt_sc_L8) + " Landsat 8 scene(s) with files missing.")
+print("There are " + str(no_corrupt_sc_L8) + " Landsat 8 scene(s) with files missing.")
 
 
 # EXERCISE I - 2) - a)
+print("\nQUESTION 3\n")
 #create a file list for each sensor to compare with actual files present
-#print((os.listdir(dir_list_L5[1])[1])[40:]) #check were relevant string ending starts --> 40
+#print((os.listdir(dir_list_L4[1])[1])[40:]) #check were relevant string ending starts --> 40
+#print((os.listdir(dir_list_L5[1])[1])[40:])
 #print((os.listdir(dir_list_L7[1])[1])[40:])
 #print((os.listdir(dir_list_L8[1])[1])[40:])
-file_endings_L5 = [] #empty text_file to write the file list
+file_endings_L4 = [] #empty text_file to write the file list
+file_endings_L5 = []
 file_endings_L7 = []
 file_endings_L8 = []
+for scene in dir_list_L4:
+    #print((os.listdir(scene)))
+    for file in os.listdir(scene):
+        file_endings_L4.append((file[40:]))
+file_endings_L4 = set(file_endings_L4)
+#print(file_endings_L4) #file list for L4
+#print((len(file_endings_L4))==(max(no_file_L4)))#check by comparing with maximum number of files per scene for L4 --> TRUE
 for scene in dir_list_L5:
     #print((os.listdir(scene)))
     for file in os.listdir(scene):
@@ -129,12 +149,20 @@ file_endings_L8 = set(file_endings_L8)
 #print((len(list(file_endings_L8)))==(max(no_file_L8)))#check by comparing with maximum number of files per scene for L8 --> TRUE
 
 #create template files list for each sensor and lists of actual files present
-files_L5=[] #for template list
+files_L4=[] #for template list
+files_L5=[]
 files_L7=[]
 files_L8=[]
-actual_files_L5 = [] #for actually existing files
+actual_files_L4 = [] #for actually existing files
+actual_files_L5 = []
 actual_files_L7 = []
 actual_files_L8 = []
+for scene_path in dir_list_L4:
+    files_scene = (os.listdir(scene_path)) #list of actual files present per scene
+    scene_name = files_scene[1][:40] #gather the prefix for the endings
+    actual_files_L4 = actual_files_L4 + (files_scene) #store each existing file in a L5 file list, add to list with each iteration
+    for ending in file_endings_L4:
+        files_L4.append(((str(scene_name))+ ending)) #creates template list of all files that should exist
 for scene_path in dir_list_L5:
     files_scene = (os.listdir(scene_path)) #list of actual files present per scene
     scene_name = files_scene[1][:40] #gather the prefix for the endings
@@ -157,11 +185,12 @@ for scene_path in dir_list_L8:
 # check difference between template and actual file lists
 text_file_filename = [] #empty list for corrupt files
 text_file = [] #empty list for corrupt file paths
+diff4 = lambda files_L4,actual_files_L4: [x for x in files_L4 if x not in actual_files_L4]
 diff5 = lambda files_L5,actual_files_L5: [x for x in files_L5 if x not in actual_files_L5]
 diff7 = lambda files_L7,actual_files_L7: [x for x in files_L7 if x not in actual_files_L7]
 diff8 = lambda files_L8,actual_files_L8: [x for x in files_L8 if x not in actual_files_L8]
 
-text_file_filename.extend(diff5(files_L5,actual_files_L5)+ diff7(files_L7,actual_files_L7)+ diff8(files_L8,actual_files_L8))
+text_file_filename.extend(diff4(files_L4,actual_files_L4)+ diff5(files_L5,actual_files_L5)+ diff7(files_L7,actual_files_L7)+ diff8(files_L8,actual_files_L8))
 
 for element in text_file_filename: #reconstructing path name (footprint/scene/file) from the file name
     dir_name = element.replace("_","") #no underscore in directory name
@@ -180,11 +209,11 @@ for line in text_file: # write list into txt file
   outF.write(line)
   outF.write("\n")
 outF.close()
-'''
 
 
 
 # EXERCISE II - 1)
+print("\nQUESTION 4\n")
 #separate vector from raster data
 GIS_files = os.listdir(GIS_path)
 
@@ -211,6 +240,9 @@ for list in vector_files_shp:   #merge multi-part-endings
     vector_endings.append("." +'.'.join(list))
 print("Each vector layer should be made up by the following file types: " + str(set(vector_endings)))
 
+vector_endings_matt = ['.shp', '.shx', '.dbf', '.prj']
+print("Matthias: Each vector layer should be made up by the following file types: " + str(vector_endings_matt))
+
     #THE SAME FOR RASTER
 for file in GIS_files:              #for each GIS file
     if ".tif" in file:              #look for the ones containing ".shp"
@@ -224,7 +256,7 @@ for file in raster_files_names: #find the elements of raster_files in GIS_files 
 for list in raster_files:   #merge multi-part-endings
     list.pop(0)# remove first element on each list, i.e. file name
     raster_endings.append("." +'.'.join(list))
-print("Each raster layer should be made up by the following file types: " + str(set(raster_endings)))
+print("\nEach raster layer should be made up by the following file types: " + str(set(raster_endings)))
 
 #list all vector files and all raster files
 vector_existing_files = []
@@ -247,7 +279,7 @@ for file in vector_existing_files:
 vector_existing_files = set(vector_existing_files) #get rid of duplicates due to multi-part-endings
 vector_layers = set(vector_existing_files_name)
 #print("Vector layers: " + str(vector_layers))
-print("There are " + str(len(vector_layers)) + " vector layer(s) in this folder.") #should be 16!!!
+print("\nThere are " + str(len(vector_layers)) + " vector layer(s) in this folder.")
 
 for ending in set(raster_endings):  #write all files with the typical raster file endings into list, clip ending tocreate unique layer name list
     for file in GIS_files:
@@ -262,6 +294,7 @@ print("There are " + str(len(raster_layers)) + " raster layer(s) in this folder.
 
 
 # EXERCISE II - 2)
+print("\nQUESTION 5\n")
 # compare number of existing files to the number of files that should exist
 vector_files = [] #complete list of vector files that should exist
 for layer in vector_layers:
@@ -281,6 +314,23 @@ print("There are " + str((len(vector_layers)) * (len(set(vector_endings))) - (le
       + str(len(diff_v_list_name)) + " vector layer(s).")
 print("The incomplete vector layers are: " + str(diff_v_list_name))
 
+#for Matthias shp-endings
+vector_files_matt = [] #complete list of vector files that should exist
+for layer in vector_layers:
+    for ending in set(vector_endings_matt):
+        vector_files_matt.append(layer + ending)
+diff_v_list_matt = []  # list of missing files
+diff_v_list_name_matt = []  # list of incomplete layers
+diff_v_matt = lambda vector_files_matt, vector_existing_files: [x for x in vector_files_matt if x not in vector_existing_files]
+diff_v_list_matt.extend(diff_v(vector_files_matt, vector_existing_files))  # missing files written into list
+for file in diff_v_list_matt:
+    diff_v_list_name_matt.append(file.split(".")[0])  # endings removed to only get the layers
+diff_v_list_name_matt = set(diff_v_list_name_matt)  # reduced to unique layer names
+
+# "set()" for removing duplicates from multiple identification of multi-part-endings
+print("\nMatthias: There are " + str(len(diff_v_list_name_matt)) + " vector layer(s) with file(s) missing.")
+#print("Matthias: The incomplete vector layers are: " + str(diff_v_list_name_matt))
+
     #SAME FOR RASTER
 raster_files = [] #complete list of raster files that should exist
 for layer in raster_layers:
@@ -296,10 +346,28 @@ for file in diff_r_list:
 diff_r_list_name = set(diff_r_list_name)# reduced to unique layer names
 
 # "set()" for removing duplicates from multiple identification of multi-part-endings
-print("There are " + str((len(raster_layers)) * (len(set(raster_endings))) - (len(raster_existing_files))) + " file(s) missing from "
+print("\nThere are " + str((len(raster_layers)) * (len(set(raster_endings))) - (len(raster_existing_files))) + " file(s) missing from "
       + str(len(diff_r_list_name)) + " raster layer(s).")
 print("The incomplete raster layers are: " + str(diff_r_list_name))
 
+print("\nQUESTION 6 \n")
+print("The incomplete vector layers are: " + str(diff_v_list_name))
+print("\nMatthias: The incomplete vector layers are: " + str(diff_v_list_name_matt))
+print("\nThe incomplete raster layers are: " + str(diff_r_list_name))
+
+#write the incomplete  into a txt file
+outF1 = open("text_file1.txt", "w") #create new txt file
+for line in diff_v_list_name: # write list into txt file
+  outF1.write(line)
+  outF1.write("\n")
+outF1.close()
+
+#for Matthias shp-endings
+outF1_matt = open("text_file1_matt.txt", "w") #create new txt file
+for line in diff_v_list_name_matt: # write list into txt file
+  outF1_matt.write(line)
+  outF1_matt.write("\n")
+outF1_matt.close()
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
 '''
 print("")
