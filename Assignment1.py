@@ -42,7 +42,7 @@ for path_fp in dir_list_fp:
     L5 = filter((re.compile("^LT05")).match, os.listdir(path_fp))
     L7 = filter((re.compile("^LE07")).match, os.listdir(path_fp))
     L8 = filter((re.compile("^LC08")).match, os.listdir(path_fp))
-    #print("For footprint " + str(path_fp[-7:]) + ", there are " + str(len(list(L4))) + " Landsat 4, " + str(len(list(L5))) + " Landsat 5, " + str(len(list(L7))) + " Landsat 7 and " + str(len(list(L8))) + " Landsat 8 scenes.")
+    print("For footprint " + str(path_fp[-7:]) + ", there are " + str(len(list(L4))) + " Landsat 4, " + str(len(list(L5))) + " Landsat 5, " + str(len(list(L7))) + " Landsat 7 and " + str(len(list(L8))) + " Landsat 8 scenes.")
 
 
 
@@ -91,13 +91,13 @@ for scene_dir in dir_list_L8:
 
 #count the number of scenes with files missing
 no_corrupt_sc_L4 = (sum(i < (max(no_file_L4)) for i in no_file_L4))
-#print("There are " + str(no_corrupt_sc_L4) + " Landsat 4 scene(s) with files missing.")
+print("There are " + str(no_corrupt_sc_L4) + " Landsat 4 scene(s) with files missing.")
 no_corrupt_sc_L5 = (sum(i < (max(no_file_L5)) for i in no_file_L5))
-#print("There are " + str(no_corrupt_sc_L5) + " Landsat 5 scene(s) with files missing.")
+print("There are " + str(no_corrupt_sc_L5) + " Landsat 5 scene(s) with files missing.")
 no_corrupt_sc_L7 = (sum(i < (max(no_file_L7)) for i in no_file_L7))
-#print("There are " + str(no_corrupt_sc_L7) + " Landsat 7 scene(s) with files missing.")
+print("There are " + str(no_corrupt_sc_L7) + " Landsat 7 scene(s) with files missing.")
 no_corrupt_sc_L8 = (sum(i < (max(no_file_L8)) for i in no_file_L8))
-#print("There are " + str(no_corrupt_sc_L8) + " Landsat 8 scene(s) with files missing.")
+print("There are " + str(no_corrupt_sc_L8) + " Landsat 8 scene(s) with files missing.")
 
 
 
@@ -275,9 +275,8 @@ print("There are " + str(len(raster_layers)) + " raster layer(s) in this folder.
 
 
 # EXERCISE II - 2)
-print("\nQUESTION 5\n")
+print("\nQUESTION 5 & QUESTION 6")
 # compare number of existing files to the number of files that should exist
-
 def CompareExFilesToPotFiles(layer_list, suffix_list, missing_files_list, incomplete_layers_list, existing_files, output_list_name):
     for layer in layer_list:
         for ending in set(suffix_list):
@@ -289,9 +288,7 @@ def CompareExFilesToPotFiles(layer_list, suffix_list, missing_files_list, incomp
     for file in missing_files_list:
         incomplete_layers_list.append(file.split(".")[0])  # endings removed to only get the layers
     incomplete_layers_list = set(incomplete_layers_list)  # reduced to unique layer names
-    # "set()" for removing duplicates from multiple identification of multi-part-endings
-    print("There are " + str(
-        (len(layer_list)) * (len(set(suffix_list))) - (len(existing_files))) + " file(s) missing from "
+    print("\nThere are " + str((len(layer_list)) * (len(set(suffix_list))) - (len(existing_files))) + " file(s) missing from "
           + str(len(incomplete_layers_list)) + " vector layer(s).")
     print("The incomplete vector layers are: " + str(incomplete_layers_list))
 
@@ -300,34 +297,35 @@ diff_v_list=[] #list of missing files
 diff_v_list_name = [] #list of incomplete layers
 CompareExFilesToPotFiles(vector_layers,vector_endings,diff_v_list,diff_v_list_name,vector_existing_files,vector_files)
 
+#for Matthias shp-endings
+vector_endings_matt = ['.shp', '.shx', '.dbf', '.prj']
+vector_files_matt = [] #complete list of vector files that should exist
+diff_v_list_matt = []  # list of missing files
+diff_v_list_name_matt = []  # list of incomplete layers
+#CompareExFilesToPotFiles(vector_layers,vector_endings_matt,diff_v_list_matt,diff_v_list_name_matt,vector_existing_files,vector_files_matt)
+for layer in vector_layers:
+    for ending in set(vector_endings_matt):
+        vector_files_matt.append(layer + ending)
+diff_v_matt = lambda vector_files_matt, vector_existing_files: [x for x in vector_files_matt if x not in vector_existing_files]
+diff_v_list_matt.extend(diff_v_matt(vector_files_matt, vector_existing_files))  # missing files written into list
+for file in diff_v_list_matt:
+    diff_v_list_name_matt.append(file.split(".")[0])  # endings removed to only get the layers
+diff_v_list_name_matt = set(diff_v_list_name_matt)  # reduced to unique layer names
+# "set()" for removing duplicates from multiple identification of multi-part-endings
+print("\nMatthias: There are " + str(len(diff_v_list_name_matt)) + " vector layer(s) with file(s) missing.")
+print("Matthias: The incomplete vector layers are: " + str(diff_v_list_name_matt))
+
 raster_files = []  # complete list of vector files that should exist
 diff_r_list=[] #list of missing files
 diff_r_list_name = [] #list of incomplete layers
 CompareExFilesToPotFiles(raster_layers,raster_endings,diff_r_list,diff_r_list_name,raster_existing_files,raster_files)
 
-#for Matthias shp-endings
-vector_files_matt = [] #complete list of vector files that should exist
-for layer in vector_layers:
-    for ending in set(vector_endings_matt):
-        vector_files_matt.append(layer + ending)
-diff_v_list_matt = []  # list of missing files
-diff_v_list_name_matt = []  # list of incomplete layers
-diff_v_matt = lambda vector_files_matt, vector_existing_files: [x for x in vector_files_matt if x not in vector_existing_files]
-diff_v_list_matt.extend(diff_v(vector_files_matt, vector_existing_files))  # missing files written into list
-for file in diff_v_list_matt:
-    diff_v_list_name_matt.append(file.split(".")[0])  # endings removed to only get the layers
-diff_v_list_name_matt = set(diff_v_list_name_matt)  # reduced to unique layer names
-
-# "set()" for removing duplicates from multiple identification of multi-part-endings
-print("\nMatthias: There are " + str(len(diff_v_list_name_matt)) + " vector layer(s) with file(s) missing.")
-#print("Matthias: The incomplete vector layers are: " + str(diff_v_list_name_matt))
 
 
-
-print("\nQUESTION 6 \n")
-print("The incomplete vector layers are: " + str(diff_v_list_name))
-print("\nMatthias: The incomplete vector layers are: " + str(diff_v_list_name_matt))
-print("\nThe incomplete raster layers are: " + str(diff_r_list_name))
+#print("\nQUESTION 6 \n")
+#print("The incomplete vector layers are: " + str(diff_v_list_name))
+#print("\nMatthias: The incomplete vector layers are: " + str(diff_v_list_name_matt))
+#print("\nThe incomplete raster layers are: " + str(diff_r_list_name))
 
 #write the incomplete  into a txt file
 outF1 = open("text_file1.txt", "w") #create new txt file
@@ -352,83 +350,3 @@ print("--------------------------------------------------------")
 print("start: " + starttime)
 print("end: " + endtime)
 print("")
-
-# ####################################### TEMPLATES ########################################################## #
-''' #DYSFUNCIONAL
-# find number of subdirectories in a directory, folders only
-for x in os.listdir(ass1_footprints):
-    if os.path.isdir(x):
-        ass1_dir_list = [ass1_footprints + x]
-    else: continue
-    print(ass1_dir_list)
-'''
-
-'''
-#create empty list for lists of scenes within each footprint
-fp_sc_list = []
-
-#extract a file list from each footprint folder and write it into the empty list
-for path_fp in dir_list_fp:
-    for foldername_fp in foldername_fp_list:
-        foldername_fp =[]
-        foldername_fp.append(os.listdir(path_fp))
-    fp_sc_list.append(foldername_fp[0]) #the 0 is only to get rid of double brackets
-print(fp_sc_list)
-print(len(fp_sc_list))
-'''
-
-'''
-#working template for regular expressions
-mylist = ["dog", "cat", "wildcat", "thundercat", "cow", "hooo"]
-r = re.compile(".*cat")
-newlist = filter(r.match, mylist)
-print (list(newlist))
-'''
-
-'''
-mylist=fp_sc_list[0]
-print (mylist)
-
-# only works for one letter
-def countStringStart(mylist):
-    count = 0
-    for item in mylist:
-        if item[0].startswith('L'):
-            count +=1
-    return count
-print(countStringStart(mylist))
-'''
-
-#count scenes per footprint
-#for i in range(len(fp_sc_list)):
-#        no= len(fp_sc_list[i])
-#        print(no)
-
-#s[:4] + '-' + s[4:] #insert a char into a string
-#x.extend(y+z)#merging multiple lists at once, by adding each element, so it doesn't become a list of lists
-
-'''
-def remove_duplicates():
-    t = ['a', 'b', 'c', 'd']
-    t2 = ['a', 'c', 'd']
-    for t in t2:
-        t.append(t.remove())
-    return t 
-'''
-''' #Splitting a Path into All of Its Parts, not tested but might be useful
-import os, sys
-def splitall(path):
-    allparts = []
-    while 1:
-        parts = os.path.split(path)
-        if parts[0] == path:  # sentinel for absolute paths
-            allparts.insert(0, parts[0])
-            break
-        elif parts[1] == path: # sentinel for relative paths
-            allparts.insert(0, parts[1])
-            break
-        else:
-            path = parts[0]
-            allparts.insert(0, parts[1])
-    return allparts
-    '''
