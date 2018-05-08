@@ -1,6 +1,6 @@
 # ####################################### FUNCTIONS ########################################################## #
 
-#separate the scene path list into different lists according to their sensor
+#AssignSceneToSensor --> separate the scene path list into different lists according to their sensor
     #directory_list --> list of scene paths
     #search_term --> term that identifies folder as scene of certain sensor (eg. "LT04" for Landsat 4)
     #output_list_name --> name of the PREVIOUSLY CREATED list to which to append the search results
@@ -13,7 +13,7 @@ def AssignSceneToSensor (directory_list, search_term, output_list_name):
         #dir_list_L4 = []
         #AssignSceneToSensor(dir_list_sc, "LT04", dir_list_L4)
 
-#create lists for Landsat sensor typical file endings
+#GetLandsatFileSuffixes --> create lists for Landsat sensor typical file endings
 #print((os.listdir(dir_list_L4[1])[1])[40:]) #check were relevant string ending starts --> 40
 def GetLandsatFileSuffixes(directory_list, output_list_name):
     for scene in directory_list:                    #takes each scene folder from the directory list
@@ -31,7 +31,7 @@ def GetLandsatFileSuffixes(directory_list, output_list_name):
                 # '_sr_atmos_opacity.tif', '_sr_band2.tif', '_sr_band7.tif', '_sensor_zenith_band4.tif', '_bt_band6.tif', '_sr_cloud_qa.tif'}
 
 
-#create template files list for each sensor and lists of actual files present
+#CreateLandsatFilesTemplate --> create template files list for each sensor and lists of actual files present
     #directory_list
     #file_suffix_list
     #output_list_name_exfiles
@@ -60,7 +60,7 @@ def CreateLandsatFilesTemplate(directory_list,file_suffix_list,output_list_name_
                 # 'LT04_L1TP_229077_19830812_20170220_01_T1_radsat_qa.tif', 'LT04_L1TP_229077_19830812_20170220_01_T1_sensor_azimuth_band4.tif',
                 # ...]
 
-# compare number of existing files to the number of files that should exist
+# CompareExFilesToPotFiles --> compare number of existing files to the number of files that should exist
     #layer_list --> list of layer names (i.e. without suffixes)
     #suffix_list --> list of data type suffixes (incl. name attachements)
     #missing_files_list --> previously empty list, will be list of missing files
@@ -90,6 +90,71 @@ def CompareExFilesToPotFiles(layer_list, suffix_list, missing_files_list, incomp
                 #returns:
                 # There are 8 file(s) missing from 4 vector layer(s).
                 # The incomplete vector layers are: {'DEM_Humboldt_aspect', 'Veg_AsRaster_30m', 'DEM_Humboldt', 'DEM_Humboldt_slope'}
+
+
+# GetCoordinates --> get coordinates for multiple tif files
+    # input: list of input files --> file_list
+    # UL --> Upper Left corner
+    # LR --> Lower Right corner
+def GetCoordinates(file_list):
+    for file in file_list:
+        ds = gdal.Open(root_folder + file, gdal.GA_ReadOnly)
+        gt = ds.GetGeoTransform()  # UL_x, x-coordinate spatial resolution, UL_y, # y-coord. spat.res.
+        # Upper left
+        UL_x, UL_y = gt[0], gt[3]
+        # Lower right
+        LR_x = UL_x + (gt[1] * ds.RasterXSize)
+        LR_y = UL_y + (gt[5] * ds.RasterYSize)
+        print("Coordinates of " + file + ": " + "(" + str(UL_x) + "," + str(UL_y) + ") and (" + str(LR_x) + "," + str(
+            LR_y) + ")")
+    #returns: printed sentences with results
+        #application example:
+        # GetCoordinates(file_list)
+            #returns:
+            # Coordinates of LC08_L1TP_117056_20140521_20170422_01_T1_sr_evi.tif: (505215.0, 673455.0) and (563925.0, 614415.0)
+            # Coordinates of LE07_L1TP_117056_20040211_20170122_01_T1_sr_evi.tif: (505455.0, 666525.0) and (564195.0, 607485.0)
+
+#GetIntersectCoordinates --> get coordinates of the largest common extent of multiple tif files
+    # input: list of input files --> file_list
+    # UL --> Upper Left corner
+    # LR --> Lower Right corner
+def GetIntersectCoordinates(file_list):
+    UL_x_list = []
+    UL_y_list = []
+    LR_x_list = []
+    LR_y_list = []
+    for file in file_list:
+        ds = gdal.Open(root_folder + file, gdal.GA_ReadOnly)
+        gt = ds.GetGeoTransform()  # UL_x, x-coordinate spatial resolution, UL_y, # y-coord. spat.res.
+        # Upper left
+        UL_x, UL_y = gt[0], gt[3]
+        UL_x_list.append(UL_x)
+        UL_y_list.append(UL_y)
+        # Lower right
+        LR_x = UL_x + (gt[1] * ds.RasterXSize)
+        LR_y = UL_y + (gt[5] * ds.RasterYSize)
+        LR_x_list.append(LR_x)
+        LR_y_list.append(LR_y)
+    UL_x_ext = max(UL_x_list)
+    UL_y_ext = min(UL_y_list)
+    LR_x_ext = min(LR_x_list)
+    LR_y_ext = max(LR_y_list)
+    LL_x_ext = UL_x_ext
+    LL_y_ext = LR_y_ext
+    UR_x_ext = LR_x_ext
+    UR_y_ext = UL_y_ext
+    print("The coordinates of the largest common extent are as follows:\n Upper left corner: (" + str(UL_x_ext) + "," + str(
+        UL_y_ext) + ")\n Upper right corner: (" + str(UR_x_ext) + "," + str(UR_y_ext) + ")\n Lower left corner: (" + str(
+        LL_x_ext) + "," + str(LL_y_ext) + ")\n Lower right corner: (" + str(LR_x_ext) + "," + str(LR_y_ext) + ")")
+    #returns: printed sentences with coordinates
+    #application example:
+    # GetIntersectCoordinates(file_list)
+        #returns:
+        # The coordinates of the largest common extent are as follows:
+        #  Upper left corner: (511635.0,663435.0)
+        #  Upper right corner: (563925.0,663435.0)
+        #  Lower left corner: (511635.0,614415.0)
+        #  Lower right corner: (563925.0,614415.0)
 
 # ####################################### TEMPLATES ########################################################## #
 
@@ -132,6 +197,19 @@ print (dir_list_sc)
     # 'D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 2 - IDE, debugger, first scripts/Assignment01_data/Part01_Landsat/228_079/LC082280792013051101T1',
     # ...]
 
+#extract a file list from a number of subfolders within a number of different parent folders in the working directory
+    #fp_sc_list --> desired output list of files from all subfolders (here scenes)
+    #dir_list_fp --> directory list of parent folders (here footprints)
+    #foldername_fp_list --> list of parent folder names (here footprints)
+fp_sc_list = []
+for path_fp in dir_list_fp:
+    for foldername_fp in foldername_fp_list:
+        foldername_fp =[]
+        foldername_fp.append(os.listdir(path_fp))
+    fp_sc_list.append(foldername_fp[0]) #the 0 is only to get rid of double brackets
+print(fp_sc_list)
+print(len(fp_sc_list))
+    #returns: To be continued...
 
 #check for missing files in list of folder directories/paths based on the maximum number of files present in any of those folders
     #check maximum number of files per scene directory
@@ -155,33 +233,26 @@ dict = {"A":"Hello","B":"Hey","C":"Hi","D":"What's up?"}
 for key in dict:
     print(key)
     print(dict[key])
+    #returns:
+    #A
+    #Hello
+    #B
+    #Hey
+    #C
+    #Hi
+    #D
+    #What's up?
 
-
-
-# ####################################### unsorted TEMPLATES ########################################################## #
-
-'''
-#create empty list for lists of scenes within each footprint
-fp_sc_list = []
-
-#extract a file list from each footprint folder and write it into the empty list
-for path_fp in dir_list_fp:
-    for foldername_fp in foldername_fp_list:
-        foldername_fp =[]
-        foldername_fp.append(os.listdir(path_fp))
-    fp_sc_list.append(foldername_fp[0]) #the 0 is only to get rid of double brackets
-print(fp_sc_list)
-print(len(fp_sc_list))
-'''
-
-'''
-#working template for regular expressions
+#working with regular expressions
 mylist = ["dog", "cat", "wildcat", "thundercat", "cow", "hooo"]
 r = re.compile(".*cat")
 newlist = filter(r.match, mylist)
 print (list(newlist))
-'''
+    #returns:
+    # ['cat', 'wildcat', 'thundercat']
 
+
+# ####################################### unsorted TEMPLATES ########################################################## #
 '''
 mylist=fp_sc_list[0]
 print (mylist)
