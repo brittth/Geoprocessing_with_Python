@@ -3,6 +3,8 @@
 import time
 import os
 import gdal
+import numpy as np
+import numpy.ma as ma
 
 # ####################################### SET TIME-COUNT ###################################################### #
 
@@ -20,16 +22,6 @@ THP = "THP_Humboldt_sub.tif"
 
 # ####################################### FUNCTIONS ########################################################## #
 
-# ####################################### PROCESSING ########################################################## #
-
-#list files for whom the common extent is needed
-file_list = os.listdir(root_folder)
-#print(file_list)
-
-
-
-#get the coordinates of the common extent (same as GetIntersectCoordinates, but not as a function as it needs to be tweaked)
-array_list = []
 def rasterOverlapToArray(file_list):
     UL_x_list = []
     UL_y_list = []
@@ -63,22 +55,37 @@ def rasterOverlapToArray(file_list):
         inv_gt = gdal.InvGeoTransform(gt)  # transform geographic coordinates into array coordinates
         x1,y1 = gdal.ApplyGeoTransform(inv_gt, overlap[0], overlap[1])
         x2,y2 = gdal.ApplyGeoTransform(inv_gt, overlap[2], overlap[3])
-        minX = int(min(x1,x2)) # x value for UL/origin
-        minY = int(min(y1,y2)) # y value for UL/origin
-        maxX = int(max(x1,x2)) # x value for LR
-        maxY = int(max(y1,y2)) # y value for LR
+        minX = int(round(min(x1,x2))) # x value for UL/origin
+        minY = int(round(min(y1,y2))) # y value for UL/origin
+        maxX = int(round(max(x1,x2))) # x value for LR
+        maxY = int(round(max(y1,y2))) # y value for LR
         print("Cell coordinates of common extent: ", minX,maxX,minY,maxY) #cell coordinates of extent for each file
         x1off, y1off = map(int, [x1, y1]) #UL
         print("UL x offset: ", x1off)
         print("UL y offset: ", y1off,"\n")
         array_list.append(ds.ReadAsArray(x1off, y1off, extent_x, extent_y)) #Upper Left corner
 
+# ####################################### PROCESSING ########################################################## #
+
+#list files for whom the common extent is needed
+file_list = os.listdir(root_folder)
+#print(file_list)
+
+
+
+#get the coordinates of the common extent and transform it into an arrays
+array_list = []
 rasterOverlapToArray(file_list)
+arr_dem = array_list[0]
+arr_slo = array_list[1]
+arr_thp = array_list[2]
 
-arr_dem = array_list[1]
-arr_slope = array_list[1]
-arr_thp = array_list[1]
-
+#calculate elevation and slope statistics while excluding/masking NoData values
+arr_dem = ma.masked_where(arr_dem >= 8000, arr_dem)
+arr_slo = ma.masked_where(arr_slo < 0, arr_slo)
+arr_thp = ma.masked_where(arr_thp > 10000, arr_thp)
+print(' mean DEM:', np.mean(arr_dem), "\n", 'min DEM:', np.min(arr_dem),'\n','max DEM:', np.max(arr_dem),'\n',
+      'mean SLOPE:', np.mean(arr_slo),'\n', 'min SLOPE:', np.min(arr_slo),'\n','max SLOPE:', np.max(arr_slo))
 
 #rb = ds.GetRasterBand(1)
 #dtype = rb.DataType
