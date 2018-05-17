@@ -71,8 +71,6 @@ def rasterOverlapToArray(file_list):
 file_list = os.listdir(root_folder)
 #print(file_list)
 
-
-
 #get the coordinates of the common extent and transform it into an arrays
 array_list = []
 rasterOverlapToArray(file_list)
