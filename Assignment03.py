@@ -26,9 +26,9 @@ THP = "THP_Humboldt_sub.tif"
 file_list = os.listdir(root_folder)
 #print(file_list)
 
+
+
 #get the coordinates of the common extent (same as GetIntersectCoordinates, but not as a function as it needs to be tweaked)
-gt_list = []
-inv_gt_list = []
 UL_x_list = []
 UL_y_list = []
 LR_x_list = []
@@ -37,14 +37,8 @@ LR_y_list = []
 for file in file_list:
     ds = gdal.Open(root_folder + file, gdal.GA_ReadOnly)
     gt = ds.GetGeoTransform()  # UL_x, x-coordinate spatial resolution, UL_y, # y-coord. spat.res.
-    gt_list.append(gt) #list of geotransform objects in lat/lon coordinates
-    inv_gt = gdal.InvGeoTransform(gt) #transform geographic coordinates into array coordinates
-    inv_gt_list.append(inv_gt)#list of geotransform objects in x/y cell coordinates
-    print(file)
-    #print(gt)
-    print(inv_gt)
     # Upper left
-    UL_x, UL_y = gt[0], gt[3] #calculate corner x/y cell coordinates (for lat/lon coordinates use gt)
+    UL_x, UL_y = gt[0], gt[3] #calculate corner lat/lon coordinates (for x/y cell coordinates use inv_gt)
     UL_x_list.append(UL_x)
     UL_y_list.append(UL_y)
     # Lower right
@@ -64,23 +58,51 @@ UR_y_ext = UL_y_ext
 #print("The coordinates of the largest common extent are as follows:\n Upper left corner: (" + str(UL_x_ext) + "," + str(
 #    UL_y_ext) + ")\n Upper right corner: (" + str(UR_x_ext) + "," + str(UR_y_ext) + ")\n Lower left corner: (" + str(
 #    LL_x_ext) + "," + str(LL_y_ext) + ")\n Lower right corner: (" + str(LR_x_ext) + "," + str(LR_y_ext) + ")")
-
 overlap = [UL_x_ext, UL_y_ext, LR_x_ext, LR_y_ext] #only upper left and lower right coordinates
 print(overlap)
-# calculating extent with lat/lon/gt: [1399618.9749825108, 705060.6257949192, 1565979.932774514, 360674.0019850965]
-# calculating extent with x/y/inv_gt: [1399618.9749825108, 2538.6444058538473, -5037.317506083792, 360674.0019850965]
+# common extent (overlap): [1399618.9749825108, 705060.6257949192, 1565979.932774514, 360674.0019850965]
+
+
 
 #convert real-world coordinates (lat/lon) to image coordinates (x,y)
-x1,y1 = gdal.ApplyGeoTransform(inv_gt, 1399619, 705061) #in die Funktion schreiben... ich check die zusammenhänge noch nicht!
-x2,y2 = gdal.ApplyGeoTransform(inv_gt, 1565980, 360674)
-minX = int(min(x1,x2))
-maxX = int(max(x1,x2))
-minY = int(min(y1,y2))
-maxY = int(max(y1,y2))
-x1off, y1off = map(int, x1,y1)
-x1off, y1off = map(int, x2,y2)
-#value_UL = band.ReadAsArray(x1off, y1off, 1, 1)[0,0] #what's band?
+# common extent (overlap): [1399618.9749825108, 705060.6257949192, 1565979.932774514, 360674.0019850965]
+#                          [UL_long,            UL_lat,            LR_long,           LR_lat           ]
+for file in file_list:
+    print(file)
+    ds = gdal.Open(root_folder + file, gdal.GA_ReadOnly)
+    nbands = ds.RasterCount
+    print("Number of Bands: ", nbands)
+    gt = ds.GetGeoTransform()  # UL_x, x-coordinate spatial resolution, UL_y, # y-coord. spat.res.
+    inv_gt = gdal.InvGeoTransform(gt)  # transform geographic coordinates into array coordinates
+    x1,y1 = gdal.ApplyGeoTransform(inv_gt, overlap[0], overlap[1])
+    x2,y2 = gdal.ApplyGeoTransform(inv_gt, overlap[2], overlap[3])
+    minX = int(min(x1,x2)) # x value for UL/origin
+    minY = int(min(y1,y2)) # y value for UL/origin
+    maxX = int(max(x1,x2)) # x value for LR
+    maxY = int(max(y1,y2)) # y value for LR
+    print("Cell coordinates of common extent: ", minX,maxX,minY,maxY) #cell coordinates of extent for each file
+    x1 = int(x1)
+    y1 = int(y1)
+    x2 = int(x2)
+    y2 = int(y2)
+    x1off, y1off = map(int, [x1, y1])
+    x2off, y2off = map(int, [x2, y2])
+    value_UL = ds.ReadAsArray(x1off, y1off, 1, 1)[0, 0]
+    value_LR = ds.ReadAsArray(x2off, y2off, 1, 1)[0, 0]
+    print("Value of Upper Left corner: ",value_UL)
+    print("Value of Lower Right corner: ",value_LR,"\n")
+    #rows_ex = y2off - y1off
+    #columns_ex = x2off - x1off
+    #print(rows_ex)
+    #print(columns_ex)
+
+#x2off, y2off = map(int, x2,y2)#error
 #value_LR = band.ReadAsArray(x2off, y2off, 1, 1)[0,0]
+#print(value_LR)
+
+rb = ds.GetRasterBand(1)
+dtype = rb.DataType
+arr = rb.ReadAsArray(0,0,cols,rows) # (origin_x, origin_y, sliceSize_x, SliceSize_y)
 
 # calculate overlap extent - raster data has its origin on the lower left corner
 extent_x = UR_x_ext - UL_x_ext
@@ -88,6 +110,10 @@ extent_y = UL_y_ext - LL_y_ext
 
 print(extent_x)
 print(extent_y)
+
+#np.min(arr2)
+#np.max(arr2)
+#np.mean(arr2)
 '''
 # Open Raster
 ds = gdal.Open(root_folder + file)
