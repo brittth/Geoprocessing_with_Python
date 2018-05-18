@@ -22,7 +22,7 @@ THP = "THP_Humboldt_sub.tif"
 
 # ####################################### FUNCTIONS ########################################################## #
 
-def rasterOverlapToArray(file_list):
+def RasterOverlapToArray(file_list):
     UL_x_list = []
     UL_y_list = []
     LR_x_list = []
@@ -65,35 +65,56 @@ def rasterOverlapToArray(file_list):
         print("UL y offset: ", y1off,"\n")
         array_list.append(ds.ReadAsArray(x1off, y1off, extent_x, extent_y)) #Upper Left corner
 
+def ThresholdBinaryArrayMask(array, operator, threshold):
+    if operator == '<':
+        array[array < threshold] = 1  # replace all values <1000 with 1
+    elif operator == '>':
+        array[array > threshold] = 1  # replace all values <1000 with 1
+    elif operator == '<=':
+        array[array <= threshold] = 1  # replace all values <1000 with 1
+    elif operator == '>=':
+        array[array >= threshold] = 1  # replace all values <1000 with 1
+    elif operator == '==':
+        array[array == threshold] = 1  # replace all values <1000 with 1
+    elif operator == '!=':
+        array[array != threshold] = 1  # replace all values <1000 with 1
+    array[array != 1] = 0  # replace all values other than 1 with 0
 # ####################################### PROCESSING ########################################################## #
 
+##EXERCISE 1
+print("EXCERCIZE I\n")
 #list files for whom the common extent is needed
 file_list = os.listdir(root_folder)
 #print(file_list)
 
 #get the coordinates of the common extent and transform it into an arrays
 array_list = []
-rasterOverlapToArray(file_list)
+RasterOverlapToArray(file_list)
 arr_dem = array_list[0]
 arr_slo = array_list[1]
 arr_thp = array_list[2]
 
-#calculate elevation and slope statistics while excluding/masking NoData values
+#calculate elevation and slope statistics while excluding/masking NoData values: mean, min, max
 arr_dem = ma.masked_where(arr_dem >= 8000, arr_dem)
 arr_slo = ma.masked_where(arr_slo < 0, arr_slo)
 arr_thp = ma.masked_where(arr_thp > 10000, arr_thp)
 print(' mean DEM:', np.mean(arr_dem), "\n", 'min DEM:', np.min(arr_dem),'\n','max DEM:', np.max(arr_dem),'\n',
       'mean SLOPE:', np.mean(arr_slo),'\n', 'min SLOPE:', np.min(arr_slo),'\n','max SLOPE:', np.max(arr_slo))
 
-#rb = ds.GetRasterBand(1)
-#dtype = rb.DataType
-#arr = rb.ReadAsArray(0,0,cols,rows) # (origin_x, origin_y, sliceSize_x, SliceSize_y)
+#build a binary mask in which areas with elevation < 1000m and slope <30deg have the value ‘1’, and all other areas the value ‘0’
+arr_dem_mask = arr_dem #to be overwritten
+ThresholdBinaryArrayMask(arr_dem_mask, "<", 1000)
+arr_slo_mask = arr_slo #to be overwritten
+ThresholdBinaryArrayMask(arr_slo_mask, "<", 30)
+arr_mask = arr_dem_mask + arr_slo_mask #add the array values
+arr_mask[arr_mask == 1] = 0 #replace all 1s with 0s
+arr_mask[arr_mask == 2] = 1 #replace all 2s with 1s
+#print(arr_mask)
+
+# Write this binary mask into a new raster file
+#TBC
 
 
-
-#np.min(arr2)
-#np.max(arr2)
-#np.mean(arr2)
 '''
 # Open Raster
 ds = gdal.Open(root_folder + file)
@@ -120,6 +141,8 @@ outDS.SetProjection(pr)
 outDS.SetGeoTransform(gt)
 # 3. Write the array into the newly generated file
 outDS.GetRasterBand(1).WriteArray(arr,0,0) # array, offset_x, offset_y)
+
+#arr_stack = ma.dstack((arr_dem_mask, arr_slo_mask)) #stack the two half masked arrays
 '''
 
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
