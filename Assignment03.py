@@ -127,16 +127,19 @@ entire_area = numcells * spat_res[0] * spat_res[1]
 ones_area = ones * spat_res[0] * spat_res[1]
 ones_prop_area = ones_area/entire_area
 ones_prop_area = round(ones_prop_area, 2)
-print("The proportional area of cells containing 1s is: ",ones_prop_area," or ",ones_prop_area*100,"% .")
+print("\nThe proportional area of cells containing 1s is: ",ones_prop_area," or ",ones_prop_area*100,"%.")
+
+
 # Write this binary mask into a new raster file
 #TBC
+'''
     # Get the basic properties of the raster file
-    '''
     gt = ds.GetGeoTransform()
     pr = ds.GetProjection()
     cols = ds.RasterXSize
     rows = ds.RasterYSize
     nbands = ds.RasterCount
+
     # Get the raster values (from the entire raster)
     rb = ds.GetRasterBand(1)
     dtype = rb.DataType
@@ -152,6 +155,48 @@ print("The proportional area of cells containing 1s is: ",ones_prop_area," or ",
     # 3. Write the array into the newly generated file
     outDS.GetRasterBand(1).WriteArray(arr, 0, 0) # (array, offset_x, offset_y)
 '''
+
+##EXERCISE 2
+print("\n\nEXCERCIZE II\n")
+#For each of the areas of the different values in the THP raster dataset calculate the mean values slope and elevation with two decimal digits.
+    #arr_stack = ma.dstack((arr_dem, arr_slo)) #stack the two half masked arrays
+years = list(range(np.min(arr_thp), (np.max(arr_thp)+1))) # +1 because the last number is exclusive
+values_file = []
+for year in years:
+    year_dem_mask = ma.masked_where(arr_thp != year, arr_dem)
+    year_slo_mask = ma.masked_where(arr_thp != year, arr_slo)
+    values = []
+    values.append(year)
+    values.append(round(np.mean(year_dem_mask), 2))
+    values.append(round(np.mean(year_slo_mask), 2))
+    values_file.append(values)
+    #print("\n", year)
+    #print(year_dem_mask)
+    #print(year_slo_mask)
+    #print("mean DEM: ", round(np.mean(year_dem_mask),2))
+    #print("mean SLOPE: ", round(np.mean(year_slo_mask), 2))
+print(values_file)
+
+'''#TEST
+a = [10, 20, 30, 40, 10]
+a= np.array(a, dtype=np.int16)
+b = [1997,0,1997,0,1997]
+b= np.array(b, dtype=np.int16)
+c = ma.masked_where(b != 1997, a)
+print(c)
+print(np.mean(c))
+'''
+
+#Write the results into a comma-separated values file. Each row thereby should have the format Year, Mean_elev, Mean_slope
+outF = open("values_file.txt", "w") #create new txt file
+for line in values_file:
+    outF.write(str(line[0]))
+    outF.write(",")
+    outF.write(str(line[1]))
+    outF.write(",")
+    outF.write(str(line[2]))
+    outF.write("\n")
+outF.close()
 
 '''
 # Open Raster
@@ -179,8 +224,6 @@ outDS.SetProjection(pr)
 outDS.SetGeoTransform(gt)
 # 3. Write the array into the newly generated file
 outDS.GetRasterBand(1).WriteArray(arr,0,0) # array, offset_x, offset_y)
-
-#arr_stack = ma.dstack((arr_dem_mask, arr_slo_mask)) #stack the two half masked arrays
 '''
 
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
