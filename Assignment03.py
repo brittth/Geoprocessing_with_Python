@@ -47,7 +47,9 @@ def RasterOverlapToArray(file_list):
     extent_y = int(round(min(UL_y_list) - max(LR_y_list))/gt[1]) #height of common extent/pixel height = number of rows
     overlap = [UL_x_ext, UL_y_ext, LR_x_ext, LR_y_ext] #only upper left and lower right coordinates
     print("Common extent UL/LR coordinates: ",overlap)
-    print("Common extent in x and y direction: ",extent_x, extent_y,"\n")
+    print("Common extent in x and y direction: ",extent_x, extent_y)
+    spat_res = [gt[1], abs(gt[5])]
+    print("Common extent spatial resolution: ", spat_res,"\n")
     for file in file_list:  #convert real-world coordinates (lat/lon) to image coordinates (x,y)
         print(file) #for overview in console
         ds = gdal.Open(root_folder + file, gdal.GA_ReadOnly)
@@ -102,6 +104,7 @@ print(' mean DEM:', np.mean(arr_dem), "\n", 'min DEM:', np.min(arr_dem),'\n','ma
       'mean SLOPE:', np.mean(arr_slo),'\n', 'min SLOPE:', np.min(arr_slo),'\n','max SLOPE:', np.max(arr_slo))
 
 #build a binary mask in which areas with elevation < 1000m and slope <30deg have the value ‘1’, and all other areas the value ‘0’
+    #shorter without a function, but better to have a function longterm
 arr_dem_mask = arr_dem #to be overwritten
 ThresholdBinaryArrayMask(arr_dem_mask, "<", 1000)
 arr_slo_mask = arr_slo #to be overwritten
@@ -111,9 +114,44 @@ arr_mask[arr_mask == 1] = 0 #replace all 1s with 0s
 arr_mask[arr_mask == 2] = 1 #replace all 2s with 1s
 #print(arr_mask)
 
+# Calculate the proportional area (two decimal digits) of raster cells having the value ‘1’ relative to the entire area
+numrows = len(arr_mask)    # 1240 rows
+numcols = len(arr_mask[0]) # 599 columns
+numcells = numrows * numcols # 742760 cells
+ones = (len(arr_mask[arr_mask == 1])) # 450992 1s present
+#zeros = (len(arr_mask[arr_mask == 0])) # 291768 1s present
+ds = gdal.Open(root_folder + DEM, gdal.GA_ReadOnly)
+gt = ds.GetGeoTransform()  # UL_x, x-coordinate spatial resolution, UL_y, # y-coord. spat.res.
+spat_res = [gt[1], abs(gt[5])]
+entire_area = numcells * spat_res[0] * spat_res[1]
+ones_area = ones * spat_res[0] * spat_res[1]
+ones_prop_area = ones_area/entire_area
+ones_prop_area = round(ones_prop_area, 2)
+print("The proportional area of cells containing 1s is: ",ones_prop_area," or ",ones_prop_area*100,"% .")
 # Write this binary mask into a new raster file
 #TBC
-
+    # Get the basic properties of the raster file
+    '''
+    gt = ds.GetGeoTransform()
+    pr = ds.GetProjection()
+    cols = ds.RasterXSize
+    rows = ds.RasterYSize
+    nbands = ds.RasterCount
+    # Get the raster values (from the entire raster)
+    rb = ds.GetRasterBand(1)
+    dtype = rb.DataType
+    arr = rb.ReadAsArray(0,0,cols,rows) # (origin_x, origin_y, sliceSize_x, SliceSize_y)
+    # 0. Formulate an outputName
+    outfile = root_folder + "DEM_Humboldt_sub_copy.tif"
+    # 1. Create a driver with which we write the output
+    drvR = gdal.GetDriverByName('GTiff')
+    # 2. Create the file (here: allthough exactly the same, we go through the syntax)
+    outDS = drvR.Create(outfile, cols, rows, nbands, dtype)
+    outDS.SetProjection(pr)
+    outDS.SetGeoTransform(gt)
+    # 3. Write the array into the newly generated file
+    outDS.GetRasterBand(1).WriteArray(arr, 0, 0) # (array, offset_x, offset_y)
+'''
 
 '''
 # Open Raster
