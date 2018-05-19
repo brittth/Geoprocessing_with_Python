@@ -185,7 +185,9 @@ def RasterOverlapToArray(file_list):
     extent_y = int(round(min(UL_y_list) - max(LR_y_list))/gt[1]) #height of common extent/pixel height = number of rows
     overlap = [UL_x_ext, UL_y_ext, LR_x_ext, LR_y_ext] #only upper left and lower right coordinates
     print("Common extent UL/LR coordinates: ",overlap)
-    print("Common extent in x and y direction: ",extent_x, extent_y,"\n")
+    print("Common extent in x and y direction: ",extent_x, extent_y)
+    spat_res = [gt[1], abs(gt[5])]
+    print("Common extent spatial resolution: ", spat_res, "\n")
     for file in file_list:  #convert real-world coordinates (lat/lon) to image coordinates (x,y)
         print(file) #for overview in console
         ds = gdal.Open(root_folder + file, gdal.GA_ReadOnly)
@@ -208,6 +210,7 @@ def RasterOverlapToArray(file_list):
         # returns:
         # Common extent UL/LR coordinates:  [1399618.9749825108, 705060.6257949192, 1565979.932774514, 360674.0019850965]
         # Common extent in x and y direction:  599 1240
+        # Common extent spatial resolution:  [277.73114823372805, 277.731148233728]
         #
         # DEM_Humboldt_sub.tif
         # Cell coordinates of common extent:  245 844 278 1518
