@@ -139,14 +139,9 @@ numcols = len(arr_mask[0]) # 599 columns
 numcells = numrows * numcols # 742760 cells
 ones = (len(arr_mask[arr_mask == 1])) # 450992 1s present
 #zeros = (len(arr_mask[arr_mask == 0])) # 291768 0s present
-ds = gdal.Open(root_folder + DEM, gdal.GA_ReadOnly)
-gt = ds.GetGeoTransform()  # UL_x, x-coordinate spatial resolution, UL_y, # y-coord. spat.res.
-spat_res = [gt[1], abs(gt[5])]
-entire_area = numcells * spat_res[0] * spat_res[1]
-ones_area = ones * spat_res[0] * spat_res[1]
-ones_prop_area = ones_area/entire_area
+ones_prop_area = ones/numcells*100
 ones_prop_area = round(ones_prop_area, 2)
-print("\nThe proportional area of cells containing 1s is: ",ones_prop_area," or ",ones_prop_area*100,"%.")
+print("\nThe proportional area of cells containing 1s is: ",ones_prop_area," or ",ones_prop_area,"%.")
 
 # Write this binary mask into a new raster file
 originfile_path = root_folder + THP # since its has the same extent and spatial resolution as arr_mask
