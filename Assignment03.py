@@ -14,6 +14,7 @@ print("Starting process, time: " + starttime)
 print("")
 
 # ####################################### FOLDER PATHS & global variables ##################################### #
+
 root_folder = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 5 - Raster processing II/Assignment03 - data/"
 
 DEM = "DEM_Humboldt_sub.tif"
@@ -81,6 +82,24 @@ def ThresholdBinaryArrayMask(array, operator, threshold):
     elif operator == '!=':
         array[array != threshold] = 1  # replace all values <1000 with 1
     array[array != 1] = 0  # replace all values other than 1 with 0
+
+def BinArray2Raster(outfile_name, originfile_path, x_offset, y_offset, array):
+    ds = gdal.Open(originfile_path)
+    # Get the basic properties of the raster file
+    gt = ds.GetGeoTransform()
+    pr = ds.GetProjection()
+    cols = ds.RasterXSize
+    rows = ds.RasterYSize
+    nbands = ds.RasterCount
+    # 1. Create a driver with which we write the output
+    drvR = gdal.GetDriverByName('GTiff')
+    # 2. Create the file (here: although exactly the same, we go through the syntax)
+    outDS = drvR.Create(outfile_name, cols, rows, nbands, gdal.GDT_Byte)
+    outDS.SetProjection(pr)
+    outDS.SetGeoTransform(gt)
+    # 3. Write the array into the newly generated file
+    outDS.GetRasterBand(1).WriteArray(array, x_offset, y_offset) # (array, offset_x, offset_y)
+
 # ####################################### PROCESSING ########################################################## #
 
 ##EXERCISE 1
@@ -97,19 +116,19 @@ arr_slo = array_list[1]
 arr_thp = array_list[2]
 
 #calculate elevation and slope statistics while excluding/masking NoData values: mean, min, max
-arr_dem = ma.masked_where(arr_dem >= 8000, arr_dem)
-arr_slo = ma.masked_where(arr_slo < 0, arr_slo)
-arr_thp = ma.masked_where(arr_thp > 10000, arr_thp)
-print(' mean DEM:', np.mean(arr_dem), "\n", 'min DEM:', np.min(arr_dem),'\n','max DEM:', np.max(arr_dem),'\n',
-      'mean SLOPE:', np.mean(arr_slo),'\n', 'min SLOPE:', np.min(arr_slo),'\n','max SLOPE:', np.max(arr_slo))
+arr_dem_m = ma.masked_where(arr_dem >= 8000, arr_dem)
+arr_slo_m = ma.masked_where(arr_slo < 0, arr_slo)
+arr_thp_m = ma.masked_where(arr_thp > 10000, arr_thp)
+print(' mean DEM:', np.mean(arr_dem_m), "\n", 'min DEM:', np.min(arr_dem_m),'\n','max DEM:', np.max(arr_dem_m),'\n',
+      'mean SLOPE:', np.mean(arr_slo_m),'\n', 'min SLOPE:', np.min(arr_slo_m),'\n','max SLOPE:', np.max(arr_slo_m))
 
 #build a binary mask in which areas with elevation < 1000m and slope <30deg have the value ‘1’, and all other areas the value ‘0’
     #shorter without a function, but better to have a function longterm
-arr_dem_mask = arr_dem #to be overwritten
-ThresholdBinaryArrayMask(arr_dem_mask, "<", 1000)
-arr_slo_mask = arr_slo #to be overwritten
-ThresholdBinaryArrayMask(arr_slo_mask, "<", 30)
-arr_mask = arr_dem_mask + arr_slo_mask #add the array values
+arr_dem_m_mask = arr_dem_m #to be overwritten
+ThresholdBinaryArrayMask(arr_dem_m_mask, "<", 1000)
+arr_slo_m_mask = arr_slo_m #to be overwritten
+ThresholdBinaryArrayMask(arr_slo_m_mask, "<", 30)
+arr_mask = arr_dem_m_mask + arr_slo_m_mask #add the array values
 arr_mask[arr_mask == 1] = 0 #replace all 1s with 0s
 arr_mask[arr_mask == 2] = 1 #replace all 2s with 1s
 #print(arr_mask)
@@ -119,7 +138,7 @@ numrows = len(arr_mask)    # 1240 rows
 numcols = len(arr_mask[0]) # 599 columns
 numcells = numrows * numcols # 742760 cells
 ones = (len(arr_mask[arr_mask == 1])) # 450992 1s present
-#zeros = (len(arr_mask[arr_mask == 0])) # 291768 1s present
+#zeros = (len(arr_mask[arr_mask == 0])) # 291768 0s present
 ds = gdal.Open(root_folder + DEM, gdal.GA_ReadOnly)
 gt = ds.GetGeoTransform()  # UL_x, x-coordinate spatial resolution, UL_y, # y-coord. spat.res.
 spat_res = [gt[1], abs(gt[5])]
@@ -129,55 +148,40 @@ ones_prop_area = ones_area/entire_area
 ones_prop_area = round(ones_prop_area, 2)
 print("\nThe proportional area of cells containing 1s is: ",ones_prop_area," or ",ones_prop_area*100,"%.")
 
-
 # Write this binary mask into a new raster file
-#TBC
-'''
-    # Get the basic properties of the raster file
-    gt = ds.GetGeoTransform()
-    pr = ds.GetProjection()
-    cols = ds.RasterXSize
-    rows = ds.RasterYSize
-    nbands = ds.RasterCount
+originfile_path = root_folder + THP # since its has the same extent and spatial resolution as arr_mask
+BinArray2Raster("binary_mask.tif", originfile_path, 0, 0, arr_mask)
+#gdal.GDT_Byte used instead of UInt16 from THP since it gave me an error
 
-    # Get the raster values (from the entire raster)
-    rb = ds.GetRasterBand(1)
-    dtype = rb.DataType
-    arr = rb.ReadAsArray(0,0,cols,rows) # (origin_x, origin_y, sliceSize_x, SliceSize_y)
-    # 0. Formulate an outputName
-    outfile = root_folder + "DEM_Humboldt_sub_copy.tif"
-    # 1. Create a driver with which we write the output
-    drvR = gdal.GetDriverByName('GTiff')
-    # 2. Create the file (here: allthough exactly the same, we go through the syntax)
-    outDS = drvR.Create(outfile, cols, rows, nbands, dtype)
-    outDS.SetProjection(pr)
-    outDS.SetGeoTransform(gt)
-    # 3. Write the array into the newly generated file
-    outDS.GetRasterBand(1).WriteArray(arr, 0, 0) # (array, offset_x, offset_y)
-'''
+
 
 ##EXERCISE 2
 print("\n\nEXCERCIZE II\n")
 #For each of the areas of the different values in the THP raster dataset calculate the mean values slope and elevation with two decimal digits.
-    #arr_stack = ma.dstack((arr_dem, arr_slo)) #stack the two half masked arrays
-years = list(range(np.min(arr_thp), (np.max(arr_thp)+1))) # +1 because the last number is exclusive
+    #arr_stack = ma.dstack((arr_dem_m, arr_slo)) #stack the two half masked arrays
+years = list(range(np.min(arr_thp_m), (np.max(arr_thp_m)+1))) # +1 because the last number is exclusive
 values_file = []
+# mask NoData, somehow the ones from above got binary
+arr_dem_m = ma.masked_where(arr_dem >= 8000, arr_dem)
+arr_slo_m = ma.masked_where(arr_slo < 0, arr_slo)
+arr_thp_m = ma.masked_where(arr_thp > 10000, arr_thp)
+#Alternatively:
+#arr_dem_mask = arr_dem * arr_dem_m
+    # arr_dem contains NoData
+    # arr_dem_m is a binary mask (1/0) with NoData being 0 --> shouldn't be binary, but can't figure out why it is
+    # arr_dem_mask has real values
 for year in years:
-    year_dem_mask = ma.masked_where(arr_thp != year, arr_dem)
-    year_slo_mask = ma.masked_where(arr_thp != year, arr_slo)
+    year_dem_mask = ma.masked_where(arr_thp_m != year, arr_dem_m) #arr_dem_m is binary!!!
+    year_slo_mask = ma.masked_where(arr_thp_m != year, arr_slo_m)
     values = []
     values.append(year)
     values.append(round(np.mean(year_dem_mask), 2))
     values.append(round(np.mean(year_slo_mask), 2))
     values_file.append(values)
-    #print("\n", year)
-    #print(year_dem_mask)
-    #print(year_slo_mask)
-    #print("mean DEM: ", round(np.mean(year_dem_mask),2))
-    #print("mean SLOPE: ", round(np.mean(year_slo_mask), 2))
 print(values_file)
 
-'''#TEST
+'''
+#TEST
 a = [10, 20, 30, 40, 10]
 a= np.array(a, dtype=np.int16)
 b = [1997,0,1997,0,1997]
@@ -197,34 +201,6 @@ for line in values_file:
     outF.write(str(line[2]))
     outF.write("\n")
 outF.close()
-
-'''
-# Open Raster
-ds = gdal.Open(root_folder + file)
-
-# Get the basic properties of the raster file
-gt = ds.GetGeoTransform()
-pr = ds.GetProjection()
-cols = ds.RasterXSize
-rows = ds.RasterYSize
-nbands = ds.RasterCount
-
-# Get the raster values (from the entire raster)
-rb = ds.GetRasterBand(1)
-dtype = rb.DataType
-arr = rb.ReadAsArray(0,0,cols,rows) # (origin_x, origin_y, sliceSize_x, SliceSize_y)
-
-# 0. Formulate an outputName
-outfile = root_folder + "DEM_Humboldt_sub_copy.tif"
-# 1. Create a driver with which we write the output
-drvR = gdal.GetDriverByName ("GTiff")
-# 2. Create the file (here: although exactly the same, we go through the syntax)
-outDS = drvR.Create(outfile,cols,rows,nbands,dtype)
-outDS.SetProjection(pr)
-outDS.SetGeoTransform(gt)
-# 3. Write the array into the newly generated file
-outDS.GetRasterBand(1).WriteArray(arr,0,0) # array, offset_x, offset_y)
-'''
 
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
 
