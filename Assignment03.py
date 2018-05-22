@@ -125,6 +125,7 @@ print(' mean DEM:', np.mean(arr_dem_m), "\n", 'min DEM:', np.min(arr_dem_m),'\n'
 #build a binary mask in which areas with elevation < 1000m and slope <30deg have the value ‘1’, and all other areas the value ‘0’
     #shorter without a function, but better to have a function longterm
 arr_dem_m_mask = arr_dem_m #to be overwritten
+#arr_dem_m_mask = arr_dem_m.copy() #better, doesn't change original
 ThresholdBinaryArrayMask(arr_dem_m_mask, "<", 1000)
 arr_slo_m_mask = arr_slo_m #to be overwritten
 ThresholdBinaryArrayMask(arr_slo_m_mask, "<", 30)
