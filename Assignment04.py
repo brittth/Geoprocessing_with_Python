@@ -19,8 +19,10 @@
 #buch s. 27
 #clejae
 
-# Clemens Jänicke, Humboldt-Universität zu Berlin
-
+# E-Mails
+# britta.themann@hu-berlin.de
+# poetzscf@hu-berlin.de
+# juliastolper@hotmail.de
 
 # #### LOAD REQUIRED LIBRARIES #### #
 import time
@@ -35,121 +37,41 @@ print("--------------------------------------------------------")
 print("Starting process, time: " + starttime)
 print("")
 
-# E-Mails
-# britta.themann@hu-berlin.de
-# poetzscf@hu-berlin.de
-# juliastolper@hotmail.de
-
 # #### FUNCTIONS #### #
-# prints all available layers in a folder
-def print_layers(fn):
-    ds = ogr.Open(fn, 0)
-    if ds is None:
-        raise OSError('Could not open {}'.format(fn))
-    for i in range(ds.GetLayerCount()):
-        lyr = ds.GetLayer(i)
-        print('{0}: {1}'.format(i, lyr.GetName()))
 
 # #### FOLDER PATHS & global variables #### #
 #wd = 'O:/Student_Data/CJaenicke/04_SoSe_18/GeoPython/data/Assignment04/'
 wd = 'D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 6 - Vector processing I/Assignment04_data/'
 
 # #### PROCESSING #### #
-
-# prints the available layers in the workind directory
-print_layers(wd)
-
 #Open a shapefile
 countries = ogr.Open(wd+"gadm36_dissolve.shp")
 protected = ogr.Open(wd+"WDPA_May2018-shapefile-polygons.shp")
-
 #Opening a layer
 layer_countries = countries.GetLayer()
 layer_protected = protected.GetLayer()
 
-#Get number of features in layer
-#Attention: overload for python
-numFeatures = layer_countries.GetFeatureCount()
-print('Feature count: ' + str(numFeatures))
-
-#Get extent as tuple
-#extent = layer_countries.GetExtent()
-#print('Extent:', extent)
-
 #OUR LOOP
-results = []
-for country in layer_countries:
-    print(country)
-    print("bla") #printed nichts
-    #if layer_protected.SetAttributeFilter("MARINE = '0'") & layer_protected.SetAttributeFilter("STATUS = 'Designated' OR 'Established'"):
-        #country.SetSpatialFilters(protected)
-     #   if country.geometry().intersects(layer_protected.geometry()):
-      #      feature_countries = layer_countries.GetFeature()
-       #     feature_protected = layer_protected.GetFeature()
-        #    results.extend(feature_countries.GetField('ID_0', 'NAME_0'), feature_protected.GetField('IUCN_CAT', 'NAME', 'STATUS_YR','GIS_AREA'))
-#print(results)
-
-# LOOP 2
-for country in layer_countries:
-    #feature_countries = layer_countries.GetFeature(1)#Get a specfic Feature via Index
-    #id = feature_countries.GetField('ID_0')#Getting a features attribute, in this case simply the ID
-    #name = feature_countries.GetField('NAME_0')
-    #print('ID:', id, '\n Name:', name)
-    feature_countries = country.GetNextFeature()#Loops over all features, extracts and prints the ID and the name
-    while feature_countries:#processing steps
-        id = feature_countries.GetField('ID_0')
-        name = feature_countries.GetField('NAME_0')
-        print('ID:', id, '\n Name:', name)
-        feature_countries = layer_countries.GetNextFeature()
-    country.ResetReading() #necessary if looping again
-    print(feature_countries)
-
-    #geometry = feature.GetGeometryRef()#Getting a feature's geometry
-    #geometry_countries = feature_countries.GetGeometryRef()
-    #Set Spatial Filter
-    #layer_countries.SetAttributeFilter("NAME_0 = 'Germany'") #filters the countries layer for Germany
-    #feature_countries = layer_countries.GetNextFeature() #gets the first feature from the filtered layer
-    #country = feature_countries.geometry().Clone() #copies geometry of this feature so that python will not try to change the actual feature
-    #layer_protected.SetSpatialFilter(country) #then sets the spatial filter in the protected areas layer with help of the copied geometry
-
-#Get a specfic Feature via Index                                #LOOP
-feature_countries = layer_countries.GetFeature(1)
-
-#Getting a features attribute, in this case simply the ID       #LOOP
-id = feature_countries.GetField('ID_0')
-name = feature_countries.GetField('NAME_0')
-print('ID:', id, '\n Name:', name)
-
-#Loops over all features, extracts and prints the ID and the name   #LOOP
 feature_countries = layer_countries.GetNextFeature()
 while feature_countries:
-    #processing steps
-    id = feature_countries.GetField('ID_0')
+    # get info from country layer
     name = feature_countries.GetField('NAME_0')
-    print('ID:', id, '\n Name:', name)
+    layer_countries.SetAttributeFilter("NAME_0 ='"+name+"'")
     feature_countries = layer_countries.GetNextFeature()
+    country = feature_countries.geometry().Clone()
+    layer_protected.SetSpatialFilter(country)
+    feature_count = layer_protected.GetFeatureCount()           #works till here
+    layer_protected.SetSpatialFilter(None)                      #no error, but doesn't do anything either
+        # Probably in the next code line is the problem,
+        # since the filter on the layer_countries is still active
+        # which results in the layer containing only one feature.
+        # I tried already to work with a second layer_countries,
+        # but somewhoe this didn't work.
+        # And it doesn't seem like a good solution.
+    feature_countries = layer_countries.GetNextFeature()
+    print('Name:', name, '#Protected Areas:', feature_count)
 layer_countries.ResetReading() #necessary if looping again
 
-#Getting a feature's geometry                                       #LOOP
-geometry = feature.GetGeometryRef()
-geometry_countries = feature_countries.GetGeometryRef()
-
-#FILTER
-#This should work now like this, just takes some time.
-#only example for one country
-#See Garrard page 27 pp
-
-#Set Spatial Filter
-layer_countries.SetAttributeFilter("NAME_0 = 'Germany'") #filters the countries layer for Germany
-feature_countries = layer_countries.GetNextFeature() #gets the first feature from the filtered layer
-country = feature_countries.geometry().Clone() #copies geometry of this feature so that python will not try to change the actual feature
-layer_protected.SetSpatialFilter(country) #then sets the spatial filter in the protected areas layer with help of the copied geometry
-
-#further processing, e.g. counting the features in the filter
-feat_count = layer_protected.GetFeatureCount() #this should count all protected areas in germany
-#destroy objects for data management purposes
-feature.Destroy()
-dataSource.Destroy()
 
 # #### END TIME-COUNT AND PRINT TIME STATS #### #
 print("")
