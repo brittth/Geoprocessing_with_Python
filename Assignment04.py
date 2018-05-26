@@ -13,7 +13,7 @@
 #   IUCN_CAT    string  [1-VI, not reported, not applicable]
 #   NAME        string
 #   STATUS_YR   string
-#   GIS_AREA    double
+# #   GIS_AREA    double
 #   STATUS      string (only designated & established)
 
 #buch s. 27
@@ -73,21 +73,59 @@ for country in clist:
     countryshp = country.geometry().Clone()
     layer_protected.SetSpatialFilter(countryshp)
     #Protected Basic Attribute Filter
-    layer_protected.SetAttributeFilter("STATUS = 'Designated'")#   STATUS == Established OR Designated --> Established muss noch dazu, hat mit OR nicht funktioniert
-    layer_protected.SetAttributeFilter("MARINE = '0'")#   MARINE string [0 (terrestrial), 1 (coastal), 2 (marine)];
+    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
     feature_count = layer_protected.GetFeatureCount()
+
     #Protected Category Filters
+        # IUCN_CAT
     # Ia
-    layer_protected.SetAttributeFilter("IUCN_CAT = 'Ia'")# IUCN_CAT    string  [1-VI, not reported, not applicable] --> Andere Kategorien fehlen noch
+    layer_protected.SetAttributeFilter("IUCN_CAT = 'Ia'")
     feature_countIa=layer_protected.GetFeatureCount()
     layer_protected.SetAttributeFilter(None)
     # Ib
-    layer_protected.SetAttributeFilter("STATUS = 'Designated'")# Wiederholt von oben
-    layer_protected.SetAttributeFilter("MARINE = '0'")
+    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
     layer_protected.SetAttributeFilter("IUCN_CAT = 'Ib'")
     feature_countIb = layer_protected.GetFeatureCount()
     layer_protected.SetAttributeFilter(None)
-    # HIER KOMMEN ALLE ANDEREN FILTER NOCH NACH DEM GLEICHEN PRINZIP
+    # II
+    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
+    layer_protected.SetAttributeFilter("IUCN_CAT = 'II'")
+    feature_countII = layer_protected.GetFeatureCount()
+    layer_protected.SetAttributeFilter(None)
+    # III
+    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
+    layer_protected.SetAttributeFilter("IUCN_CAT = 'III'")
+    feature_countIII = layer_protected.GetFeatureCount()
+    layer_protected.SetAttributeFilter(None)
+    # IV
+    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
+    layer_protected.SetAttributeFilter("IUCN_CAT = 'IV'")
+    feature_countIV = layer_protected.GetFeatureCount()
+    layer_protected.SetAttributeFilter(None)
+    # V
+    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
+    layer_protected.SetAttributeFilter("IUCN_CAT = 'V'")
+    feature_countV = layer_protected.GetFeatureCount()
+    layer_protected.SetAttributeFilter(None)
+    # VI
+    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
+    layer_protected.SetAttributeFilter("IUCN_CAT = 'VI'")
+    feature_countVI = layer_protected.GetFeatureCount()
+    layer_protected.SetAttributeFilter(None)
+    # Not Applicable
+    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
+    layer_protected.SetAttributeFilter("IUCN_CAT = 'Not Applicable'")
+    feature_countNotApplicable = layer_protected.GetFeatureCount()
+    layer_protected.SetAttributeFilter(None)
+    # Not Reported
+    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
+    layer_protected.SetAttributeFilter("IUCN_CAT = 'Not Reported'")
+    feature_countNotReported = layer_protected.GetFeatureCount()
+    layer_protected.SetAttributeFilter(None)
+        #GIS_AREA double
+        #STATUS string
+        #STATUS_YR string
+
     layer_protected.SetSpatialFilter(None)
     print('Country ID: ',id,'\n',
           'Country Name:',name,'\n',
@@ -95,6 +133,13 @@ for country in clist:
           '# PAs:', feature_count,'\n',
           'PA Category Ia: ', feature_countIa,'\n',
           'PA Category Ib: ', feature_countIb,'\n',
+          'PA Category II: ', feature_countII, '\n',
+          'PA Category III: ', feature_countIII, '\n',
+          'PA Category IV: ', feature_countIV, '\n',
+          'PA Category V: ', feature_countV, '\n',
+          'PA Category VI: ', feature_countVI, '\n',
+          'PA Category Not Applicable: ', feature_countNotApplicable, '\n',
+          'PA Category Not Reported: ', feature_countNotReported, '\n',
           'Mean area of PAs: noch nichts','\n',
           'Area of largest PA: noch nichts','\n',
           'Name of largest PA: noch nichts','\n',
