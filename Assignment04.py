@@ -150,6 +150,26 @@ for country in clist:
           'Name of largest PA: maxAreaName -> noch nichts','\n',
           'Year of etsabl. of largest PA: statusYr ERROR\n\n') #ERROR
 
+#PANEL TEST
+#General Form
+
+#pandas.Panel(data=None, items=None, major_axis=None, minor_axis=None, copy=False, dtype=None)
+
+#data : ndarray (items x major x minor), or dict of DataFrames
+#items : Index or array-like
+#   axis=0
+#major_axis : Index or array-like
+#    axis=1
+#minor_axis : Index or array-like
+#    axis=2
+#dtype : dtype, default None
+#    Data type to force, otherwise infer
+#copy : boolean, default False
+#    Copy data from inputs. Only affects DataFrame / 2d ndarray input
+
+#       --> Wir brachen die Daten in Form von einem array, dict oder DataFrames
+
+
 # #### END TIME-COUNT AND PRINT TIME STATS #### #
 print("")
 endtime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
