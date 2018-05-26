@@ -122,14 +122,19 @@ for country in clist:
     layer_protected.SetAttributeFilter("IUCN_CAT = 'Not Reported'")
     feature_countNotReported = layer_protected.GetFeatureCount()
     layer_protected.SetAttributeFilter(None)
-        #GIS_AREA double
-        #STATUS string
-        #STATUS_YR string
+        #GIS_AREA
+    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
+    #Weiß nicht wie man eine ganze Spalte gleichzeitig anspricht, bzw. geht ja eigentlich nicht in dieser for schleife
+    # meanArea
+    # maxArea
+    # maxAreaName
+        #STATUS_YR
+    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
+    #statusYr = layer_protected.GetField('STATUS_YR') #ERROR
 
     layer_protected.SetSpatialFilter(None)
     print('Country ID: ',id,'\n',
           'Country Name:',name,'\n',
-          'PA Category: noch nichts','\n',
           '# PAs:', feature_count,'\n',
           'PA Category Ia: ', feature_countIa,'\n',
           'PA Category Ib: ', feature_countIb,'\n',
@@ -140,13 +145,10 @@ for country in clist:
           'PA Category VI: ', feature_countVI, '\n',
           'PA Category Not Applicable: ', feature_countNotApplicable, '\n',
           'PA Category Not Reported: ', feature_countNotReported, '\n',
-          'Mean area of PAs: noch nichts','\n',
-          'Area of largest PA: noch nichts','\n',
-          'Name of largest PA: noch nichts','\n',
-          'Year of etsabl. of largest PA: noch nichs\n\n')
-
-
-
+          'Mean area of PAs: meanArea -> noch nichts','\n',
+          'Area of largest PA: maxArea -> noch nichts','\n',
+          'Name of largest PA: maxAreaName -> noch nichts','\n',
+          'Year of etsabl. of largest PA: statusYr ERROR\n\n') #ERROR
 
 # #### END TIME-COUNT AND PRINT TIME STATS #### #
 print("")
