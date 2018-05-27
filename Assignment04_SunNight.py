@@ -43,6 +43,7 @@ for feat in cl:
     pl.SetAttributeFilter("IUCN_CAT ='Ia'")
     countIa = pl.GetFeatureCount()
     meanIa = sum(r['PA Area']) / len(r['PA Area'])
+    maxIa = max(r['PA Area'])
     pl.SetAttributeFilter(None)
     pl.SetAttributeFilter("MARINE='0'" and ("STATUS = 'Designated'" or "STATUS = 'Established'"))
 
@@ -50,6 +51,7 @@ for feat in cl:
     pl.SetAttributeFilter("IUCN_CAT ='b'")
     countIb = pl.GetFeatureCount()
     meanIb = sum(r['PA Area']) / len(r['PA Area'])
+    maxIb = max(r['PA Area'])
     pl.SetAttributeFilter(None)
     pl.SetAttributeFilter("MARINE='0'" and ("STATUS = 'Designated'" or "STATUS = 'Established'"))
 
@@ -57,6 +59,7 @@ for feat in cl:
     pl.SetAttributeFilter("IUCN_CAT ='II'")
     countII = pl.GetFeatureCount()
     meanII = sum(r['PA Area']) / len(r['PA Area'])
+    maxII = max(r['PA Area'])
     pl.SetAttributeFilter(None)
     pl.SetAttributeFilter("MARINE='0'" and ("STATUS = 'Designated'" or "STATUS = 'Established'"))
 
@@ -64,6 +67,7 @@ for feat in cl:
     pl.SetAttributeFilter("IUCN_CAT ='III'")
     countIII = pl.GetFeatureCount()
     meanIII = sum(r['PA Area']) / len(r['PA Area'])
+    maxIII = max(r['PA Area'])
     pl.SetAttributeFilter(None)
     pl.SetAttributeFilter("MARINE='0'" and ("STATUS = 'Designated'" or "STATUS = 'Established'"))
 
@@ -71,6 +75,7 @@ for feat in cl:
     pl.SetAttributeFilter("IUCN_CAT ='IV'")
     countIV = pl.GetFeatureCount()
     meanIV = sum(r['PA Area']) / len(r['PA Area'])
+    maxIV = max(r['PA Area'])
     pl.SetAttributeFilter(None)
     pl.SetAttributeFilter("MARINE='0'" and ("STATUS = 'Designated'" or "STATUS = 'Established'"))
 
@@ -78,6 +83,7 @@ for feat in cl:
     pl.SetAttributeFilter("IUCN_CAT ='V'")
     countV = pl.GetFeatureCount()
     meanV = sum(r['PA Area']) / len(r['PA Area'])
+    maxV = max(r['PA Area'])
     pl.SetAttributeFilter(None)
     pl.SetAttributeFilter("MARINE='0'" and ("STATUS = 'Designated'" or "STATUS = 'Established'"))
 
@@ -85,6 +91,7 @@ for feat in cl:
     pl.SetAttributeFilter("IUCN_CAT ='VI'")
     countVI = pl.GetFeatureCount()
     meanVI = sum(r['PA Area']) / len(r['PA Area'])
+    maxVI = max(r['PA Area'])
     pl.SetAttributeFilter(None)
     pl.SetAttributeFilter("MARINE='0'" and ("STATUS = 'Designated'" or "STATUS = 'Established'"))
 
@@ -92,6 +99,7 @@ for feat in cl:
     pl.SetAttributeFilter("IUCN_CAT ='Not Applicable'")
     countNotApplicable = pl.GetFeatureCount()
     meanNotApplicable = sum(r['PA Area']) / len(r['PA Area'])
+    maxNotApplicable = max(r['PA Area'])
     pl.SetAttributeFilter(None)
     pl.SetAttributeFilter("MARINE='0'" and ("STATUS = 'Designated'" or "STATUS = 'Established'"))
 
@@ -99,6 +107,7 @@ for feat in cl:
     pl.SetAttributeFilter("IUCN_CAT ='Not Reported'")
     countNotReported = pl.GetFeatureCount()
     meanNotReported = sum(r['PA Area']) / len(r['PA Area'])
+    maxNotReported = max(r['PA Area'])
     pl.SetAttributeFilter(None)
     pl.SetAttributeFilter("MARINE='0'" and ("STATUS = 'Designated'" or "STATUS = 'Established'"))
 
@@ -128,10 +137,21 @@ for feat in cl:
     r['Mean area of PAs'].append(meanNotApplicable)
     r['Mean area of PAs'].append(meanNotReported)
 
+    #Area of largest PA
+    #largest = r['PA Area']
+    max = max(r['PA Area'])
+    r['Area of largest PA'].append(max)
+    r['Area of largest PA'].append(maxIa)
+    r['Area of largest PA'].append(maxIb)
+    r['Area of largest PA'].append(maxII)
+    r['Area of largest PA'].append(maxIII)
+    r['Area of largest PA'].append(maxIV)
+    r['Area of largest PA'].append(maxV)
+    r['Area of largest PA'].append(maxVI)
+    r['Area of largest PA'].append(maxNotApplicable)
+    r['Area of largest PA'].append(maxNotReported)
 
 
-
-    #r['Area of largest PA'].append(sub.GetField('GIS_AREA'))
     #r['Name of largest PA'].append(sub.GetField('GIS_AREA'))
     #r['Mean area of PAs'].append(sub.GetField('IUCN_CAT'))
     #r['Area of largest PA'].append(sub.GetField('IUCN_CAT'))
