@@ -20,8 +20,8 @@ pl = pas.GetLayer()
 pl.SetAttributeFilter("MARINE='0'" and ("STATUS = 'Designated'" or "STATUS = 'Established'"))
 
 
-k = ['Country ID', 'Country Name', 'PA Category', '# PAs', 'Mean area of PAs', 'Area of largest PA', 'Name of largest PA', 'Year of establ. of largest PA', 'PA Area']
-v = [[], [], [], [], [], [], [], [], []]
+k = ['Country ID', 'Country Name', 'PA Category', '# PAs', 'Mean area of PAs', 'Area of largest PA', 'Name of largest PA', 'Year of establ. of largest PA', 'PA Area', 'PA Name']
+v = [[], [], [], [], [], [], [], [], [], []]
 r = dict(zip(k, v))
 
 
@@ -35,7 +35,7 @@ for feat in cl:
         r['Country ID'].append(feat.GetField('ID_0'))
         r['Country Name'].append(feat.GetField('NAME_0'))
         r['PA Category'].append(sub.GetField('IUCN_CAT'))
-        #r['PA Name'].append(sub.GetField('NAME'))
+        r['PA Name'].append(sub.GetField('NAME'))
         r['Year of establ. of largest PA'].append(sub.GetField('STATUS_YR'))
         r['PA Area'].append(sub.GetField('GIS_AREA'))
 
@@ -44,6 +44,8 @@ for feat in cl:
     countIa = pl.GetFeatureCount()
     meanIa = sum(r['PA Area']) / len(r['PA Area'])
     maxIa = max(r['PA Area'])
+    index = r['PA Area'].index(maxIa)
+    nameIa = (r['PA Name'][index])
     pl.SetAttributeFilter(None)
     pl.SetAttributeFilter("MARINE='0'" and ("STATUS = 'Designated'" or "STATUS = 'Established'"))
 
@@ -52,6 +54,8 @@ for feat in cl:
     countIb = pl.GetFeatureCount()
     meanIb = sum(r['PA Area']) / len(r['PA Area'])
     maxIb = max(r['PA Area'])
+    index = r['PA Area'].index(maxIb)
+    nameIb = (r['PA Name'][index])
     pl.SetAttributeFilter(None)
     pl.SetAttributeFilter("MARINE='0'" and ("STATUS = 'Designated'" or "STATUS = 'Established'"))
 
@@ -60,6 +64,8 @@ for feat in cl:
     countII = pl.GetFeatureCount()
     meanII = sum(r['PA Area']) / len(r['PA Area'])
     maxII = max(r['PA Area'])
+    index = r['PA Area'].index(maxII)
+    nameII = (r['PA Name'][index])
     pl.SetAttributeFilter(None)
     pl.SetAttributeFilter("MARINE='0'" and ("STATUS = 'Designated'" or "STATUS = 'Established'"))
 
@@ -68,6 +74,8 @@ for feat in cl:
     countIII = pl.GetFeatureCount()
     meanIII = sum(r['PA Area']) / len(r['PA Area'])
     maxIII = max(r['PA Area'])
+    index = r['PA Area'].index(maxIII)
+    nameIII = (r['PA Name'][index])
     pl.SetAttributeFilter(None)
     pl.SetAttributeFilter("MARINE='0'" and ("STATUS = 'Designated'" or "STATUS = 'Established'"))
 
@@ -76,6 +84,8 @@ for feat in cl:
     countIV = pl.GetFeatureCount()
     meanIV = sum(r['PA Area']) / len(r['PA Area'])
     maxIV = max(r['PA Area'])
+    index = r['PA Area'].index(maxIV)
+    nameIV = (r['PA Name'][index])
     pl.SetAttributeFilter(None)
     pl.SetAttributeFilter("MARINE='0'" and ("STATUS = 'Designated'" or "STATUS = 'Established'"))
 
@@ -84,6 +94,8 @@ for feat in cl:
     countV = pl.GetFeatureCount()
     meanV = sum(r['PA Area']) / len(r['PA Area'])
     maxV = max(r['PA Area'])
+    index = r['PA Area'].index(maxV)
+    nameV = (r['PA Name'][index])
     pl.SetAttributeFilter(None)
     pl.SetAttributeFilter("MARINE='0'" and ("STATUS = 'Designated'" or "STATUS = 'Established'"))
 
@@ -92,6 +104,8 @@ for feat in cl:
     countVI = pl.GetFeatureCount()
     meanVI = sum(r['PA Area']) / len(r['PA Area'])
     maxVI = max(r['PA Area'])
+    index = r['PA Area'].index(maxVI)
+    nameVI = (r['PA Name'][index])
     pl.SetAttributeFilter(None)
     pl.SetAttributeFilter("MARINE='0'" and ("STATUS = 'Designated'" or "STATUS = 'Established'"))
 
@@ -100,6 +114,8 @@ for feat in cl:
     countNotApplicable = pl.GetFeatureCount()
     meanNotApplicable = sum(r['PA Area']) / len(r['PA Area'])
     maxNotApplicable = max(r['PA Area'])
+    index = r['PA Area'].index(maxNotApplicable)
+    nameNotApplicable = (r['PA Name'][index])
     pl.SetAttributeFilter(None)
     pl.SetAttributeFilter("MARINE='0'" and ("STATUS = 'Designated'" or "STATUS = 'Established'"))
 
@@ -108,6 +124,8 @@ for feat in cl:
     countNotReported = pl.GetFeatureCount()
     meanNotReported = sum(r['PA Area']) / len(r['PA Area'])
     maxNotReported = max(r['PA Area'])
+    index = r['PA Area'].index(maxNotReported)
+    nameNotReported = (r['PA Name'][index])
     pl.SetAttributeFilter(None)
     pl.SetAttributeFilter("MARINE='0'" and ("STATUS = 'Designated'" or "STATUS = 'Established'"))
 
@@ -138,7 +156,6 @@ for feat in cl:
     r['Mean area of PAs'].append(meanNotReported)
 
     #Area of largest PA
-    #largest = r['PA Area']
     max = max(r['PA Area'])
     r['Area of largest PA'].append(max)
     r['Area of largest PA'].append(maxIa)
@@ -151,16 +168,25 @@ for feat in cl:
     r['Area of largest PA'].append(maxNotApplicable)
     r['Area of largest PA'].append(maxNotReported)
 
-
-    #r['Name of largest PA'].append(sub.GetField('GIS_AREA'))
-    #r['Mean area of PAs'].append(sub.GetField('IUCN_CAT'))
-    #r['Area of largest PA'].append(sub.GetField('IUCN_CAT'))
-    #r['Name of largest PA'].append(sub.GetField('IUCN_CAT'))
+    #Name of largest PA
+    index = r['PA Area'].index(max)
+    name = (r['PA Name'][index])
+    r['Name of largest PA'].append(name)
+    r['Name of largest PA'].append(nameIa)
+    r['Name of largest PA'].append(nameIb)
+    r['Name of largest PA'].append(nameII)
+    r['Name of largest PA'].append(nameIII)
+    r['Name of largest PA'].append(nameIV)
+    r['Name of largest PA'].append(nameV)
+    r['Name of largest PA'].append(nameVI)
+    r['Name of largest PA'].append(nameNotApplicable)
+    r['Name of largest PA'].append(nameNotReported)
 
     pl.SetSpatialFilter(None)
 
-# PA Area wieder löschen, wurde nur für die Schleife gebraucht
+#only needed for loop
 del r['PA Area']
+del r['PA Name']
 
 df = pandas.DataFrame(data=r)
 
