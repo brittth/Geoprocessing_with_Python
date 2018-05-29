@@ -1,35 +1,6 @@
-## Group II – the SHP/GIS-group
-# IUCN: I-VI, no data values (not reported, Not Applicable)
-
-#SQL query:
-#   MARINE == 0
-#   STATUS == established OR designated
-
-# set spatial filter (intersect) loop over countries and append attributed of PA's
-
-# needed variables:
-#   country
-#   MARINE      string  [0 (terrestrial), 1 (coastal), 2 (marine)];
-#   IUCN_CAT    string  [1-VI, not reported, not applicable]
-#   NAME        string
-#   STATUS_YR   string
-# #   GIS_AREA    double
-#   STATUS      string (only designated & established)
-
-#buch s. 27
-#clejae
-
-# E-Mails
-# britta.themann@hu-berlin.de
-# poetzscf@hu-berlin.de
-# juliastolper@hotmail.de
-
-# #### LOAD REQUIRED LIBRARIES #### #
 import time
-try:
-    from osgeo import ogr
-except:
-    import ogr
+from osgeo import ogr
+import pandas as pd
 
 # #### SET TIME-COUNT #### #
 starttime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
@@ -37,137 +8,113 @@ print("--------------------------------------------------------")
 print("Starting process, time: " + starttime)
 print("")
 
-# #### FUNCTIONS #### #
+# lycoun = '/home/florian/Geodata_with_Python/session5/Assignment04_data/gadm36_dissolve.shp'
+# lypa   = '/home/florian/Geodata_with_Python/session5/Assignment04_data/WDPA_May2018-shapefile-polygons.shp'
+#
+# country = ogr.Open(lycoun)
+# pas     = ogr.Open(lypa)
+#
+# cl = country.GetLayer()
+# pl = pas.GetLayer()
+# pl.SetAttributeFilter("MARINE='0'" and ("STATUS = 'Designated'" or "STATUS = 'Established'"))
+#
+# k = ['Country ID', 'Country Name', 'PA Category', 'PA Name', 'PA Area', 'PA Established']
+# v = [[], [], [], [], [], []]
+# r = dict(zip(k, v))
+#
+# for feat in cl:
+#     extr = feat.geometry().Clone()
+#     pl.SetSpatialFilter(extr)
+#     print(feat.GetField('Name_0'))
+#
+#     for sub in pl:+
+#         r['Country ID'].append(feat.GetField('ID_0'))
+#         r['Country Name'].append(feat.GetField('NAME_0'))
+#         r['PA Category'].append(sub.GetField('IUCN_CAT'))
+#         r['PA Name'].append(sub.GetField('NAME'))
+#         r['PA Area'].append(sub.GetField('GIS_AREA'))
+#         r['PA Established'].append(sub.GetField('STATUS_YR'))
+#
+#     pl.SetSpatialFilter(None)
+#
+# cl.ResetReading() # sets country's starting feature to zero
+#
+# # store the extracts
+# df = pd.DataFrame(data=r)
+# df.to_csv('/home/florian/Geodata_with_Python/session5/inter_GIS_AREA.csv', sep=',',index=False)
 
-# #### FOLDER PATHS & global variables #### #
-#wd = 'O:/Student_Data/CJaenicke/04_SoSe_18/GeoPython/data/Assignment04/'
-wd = 'D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 6 - Vector processing I/Assignment04_data/'
+# load the extracts
+da = pd.read_csv('/home/florian/Geodata_with_Python/session5/inter_GIS_AREA.csv', sep=',', lineterminator='\n')
 
-# #### PROCESSING #### #
-#Open a shapefile
-countries = ogr.Open(wd+"gadm36_dissolve.shp")
-protected = ogr.Open(wd+"WDPA_May2018-shapefile-polygons.shp")
-ctest = ogr.Open(wd+"ctest.shp")
+kill = ['Not Reported', 'Not Applicable', 'Not Assigned']
 
-#Opening a layer
-layer_countries = countries.GetLayer()
-layer_protected = protected.GetLayer()
-layer_ctest = ctest.GetLayer()
+da = da[~da['PA Category'].isin(kill)]
+da2 = da.groupby(['Country ID', 'Country Name', 'PA Category'])['PA Area'].count()
+da3 = da.groupby(['Country ID', 'Country Name', 'PA Category'])['PA Area'].mean()
+da4 = da.groupby(['Country ID', 'Country Name', 'PA Category'])['PA Area'].max()
+da['test'] = da.groupby(['Country ID', 'Country Name', 'PA Category'])['PA Area'].transform(max) == da['PA Area']
+da5 = da.groupby(['Country ID', 'Country Name', 'PA Category', 'test'])['PA Name'].unique()
+da6 = da.groupby(['Country ID', 'Country Name', 'PA Category', 'test'])['PA Established'].unique()
 
-#OUR LOOP
-num_countries = layer_ctest.GetFeatureCount()
-nums = list(range(0,num_countries))
-#print(nums)
+da5df = pd.DataFrame(da5).reset_index()
+da5df.columns = ['ID', 'Country', 'Cat', 'test', 'Name']
+da5df = da5df[da5df['test'] == True]
+da5df = pd.DataFrame(da5df).reset_index()
+da5   = da5df['Name'].str[0]
 
-clist = []
-for index in nums:
-    #Get a specfic Feature via Index
-    clist.append(layer_countries.GetFeature(index))
-#print(clist)
+da6df = pd.DataFrame(da6).reset_index()
+da6df.columns = ['ID', 'Country', 'Cat', 'test', 'Estab']
+da6df = da6df[da6df['test'] == True]
+da6df = pd.DataFrame(da6df).reset_index()
+da6 = da6df['Estab'].str[0]
+da6 = da6.astype(int)
 
-for country in clist:
-    #Country Spatial Filter
-    id = country.GetField('ID_0')
-    name = country.GetField('NAME_0')
-    layer_countries.SetAttributeFilter("NAME_0 ='" + name + "'")
-    countryshp = country.geometry().Clone()
-    layer_protected.SetSpatialFilter(countryshp)
-    #Protected Basic Attribute Filter
-    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
-    feature_count = layer_protected.GetFeatureCount()
+res = pd.DataFrame(da2).reset_index()
+res.columns = ['Country ID', 'Country Name', 'PA Category', '# PAs']
+res['Mean area of PAs']              = da3.values
+res['Area of largest PA']            = da4.values
+res['Name of largest PA']            = da5.values
+res['Year of establ. Of largest PA'] = da6.values
 
-    #Protected Category Filters
-        # IUCN_CAT
-    # Ia
-    layer_protected.SetAttributeFilter("IUCN_CAT = 'Ia'")
-    feature_countIa=layer_protected.GetFeatureCount()
-    layer_protected.SetAttributeFilter(None)
-    # Ib
-    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
-    layer_protected.SetAttributeFilter("IUCN_CAT = 'Ib'")
-    feature_countIb = layer_protected.GetFeatureCount()
-    layer_protected.SetAttributeFilter(None)
-    # II
-    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
-    layer_protected.SetAttributeFilter("IUCN_CAT = 'II'")
-    feature_countII = layer_protected.GetFeatureCount()
-    layer_protected.SetAttributeFilter(None)
-    # III
-    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
-    layer_protected.SetAttributeFilter("IUCN_CAT = 'III'")
-    feature_countIII = layer_protected.GetFeatureCount()
-    layer_protected.SetAttributeFilter(None)
-    # IV
-    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
-    layer_protected.SetAttributeFilter("IUCN_CAT = 'IV'")
-    feature_countIV = layer_protected.GetFeatureCount()
-    layer_protected.SetAttributeFilter(None)
-    # V
-    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
-    layer_protected.SetAttributeFilter("IUCN_CAT = 'V'")
-    feature_countV = layer_protected.GetFeatureCount()
-    layer_protected.SetAttributeFilter(None)
-    # VI
-    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
-    layer_protected.SetAttributeFilter("IUCN_CAT = 'VI'")
-    feature_countVI = layer_protected.GetFeatureCount()
-    layer_protected.SetAttributeFilter(None)
-    # Not Applicable
-    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
-    layer_protected.SetAttributeFilter("IUCN_CAT = 'Not Applicable'")
-    feature_countNotApplicable = layer_protected.GetFeatureCount()
-    layer_protected.SetAttributeFilter(None)
-    # Not Reported
-    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
-    layer_protected.SetAttributeFilter("IUCN_CAT = 'Not Reported'")
-    feature_countNotReported = layer_protected.GetFeatureCount()
-    layer_protected.SetAttributeFilter(None)
-        #GIS_AREA
-    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
-    #Weiß nicht wie man eine ganze Spalte gleichzeitig anspricht, bzw. geht ja eigentlich nicht in dieser for schleife
-    # meanArea
-    # maxArea
-    # maxAreaName
-        #STATUS_YR
-    layer_protected.SetAttributeFilter("MARINE='0'" and ("STATUS='Designated' or STATUS='Established'"))
-    #statusYr = layer_protected.GetField('STATUS_YR') #ERROR
+r1 = da.groupby(['Country ID', 'Country Name'])['PA Area'].count()
+r2 = da.groupby(['Country ID', 'Country Name'])['PA Area'].mean()
+r3 = da.groupby(['Country ID', 'Country Name'])['PA Area'].max()
+da['test'] = da.groupby(['Country ID', 'Country Name'])['PA Area'].transform(max) == da['PA Area']
+r4 = da.groupby(['Country ID', 'Country Name', 'PA Category', 'test'])['PA Name'].unique()
+r5 = da.groupby(['Country ID', 'Country Name', 'PA Category', 'test'])['PA Established'].unique()
 
-    layer_protected.SetSpatialFilter(None)
-    print('Country ID: ',id,'\n',
-          'Country Name:',name,'\n',
-          '# PAs:', feature_count,'\n',
-          'PA Category Ia: ', feature_countIa,'\n',
-          'PA Category Ib: ', feature_countIb,'\n',
-          'PA Category II: ', feature_countII, '\n',
-          'PA Category III: ', feature_countIII, '\n',
-          'PA Category IV: ', feature_countIV, '\n',
-          'PA Category V: ', feature_countV, '\n',
-          'PA Category VI: ', feature_countVI, '\n',
-          'PA Category Not Applicable: ', feature_countNotApplicable, '\n',
-          'PA Category Not Reported: ', feature_countNotReported, '\n',
-          'Mean area of PAs: meanArea -> noch nichts','\n',
-          'Area of largest PA: maxArea -> noch nichts','\n',
-          'Name of largest PA: maxAreaName -> noch nichts','\n',
-          'Year of etsabl. of largest PA: statusYr ERROR\n\n') #ERROR
+r4df = pd.DataFrame(r4).reset_index()
+r4df.columns = ['ID', 'Country', 'Cat', 'test', 'Name']
+r4df = r4df[r4df['test'] == True]
+r4df = pd.DataFrame(r4df).reset_index()
+r4   = r4df['Name'].str[0]
 
-#PANEL TEST
-#General Form
+r5df = pd.DataFrame(r5).reset_index()
+r5df.columns = ['ID', 'Country', 'Cat', 'test', 'Estab']
+r5df = r5df[r5df['test'] == True]
+r5df = pd.DataFrame(r5df).reset_index()
+r5 = r5df['Estab'].str[0]
+r5 = r5.astype(int)
 
-#pandas.Panel(data=None, items=None, major_axis=None, minor_axis=None, copy=False, dtype=None)
+res2 = pd.DataFrame(r1).reset_index()
+res2.columns = ['Country ID', 'Country Name', '# PAs']
+res2['Mean area of PAs']              = r2.values
+res2['Area of largest PA']            = r3.values
+res2['Name of largest PA']            = r4.values
+res2['Year of establ. Of largest PA'] = r5.values
+res2['PA Category'] = 'ALL'
+res2 = res2[['Country ID', 'Country Name', 'PA Category', '# PAs',
+             'Mean area of PAs', 'Area of largest PA', 'Name of largest PA', 'Year of establ. Of largest PA']]
 
-#data : ndarray (items x major x minor), or dict of DataFrames
-#items : Index or array-like
-#   axis=0
-#major_axis : Index or array-like
-#    axis=1
-#minor_axis : Index or array-like
-#    axis=2
-#dtype : dtype, default None
-#    Data type to force, otherwise infer
-#copy : boolean, default False
-#    Copy data from inputs. Only affects DataFrame / 2d ndarray input
+res3 = pd.concat([res, res2], ignore_index=True)
+sorti = ['ALL', 'Ia', 'Ib', 'II', 'III', 'IV', 'V', 'VI']
+res3['PA Category'] = res3['PA Category'].astype('category')
+res3['PA Category'].cat.set_categories(sorti, inplace=True)
 
-#       --> Wir brachen die Daten in Form von einem array, dict oder DataFrames
+res3 = res3.sort_values(by=['Country ID', 'PA Category'])
+res3['Mean area of PAs'] = round(res3['Mean area of PAs'], 2)
+res3['Area of largest PA'] = round(res3['Area of largest PA'], 2)
+res3.to_csv('/home/florian/Geodata_with_Python/session5/Britta_Clemens_Flo_Julia_Assign4.csv', sep=',',index=False)
 
 
 # #### END TIME-COUNT AND PRINT TIME STATS #### #
