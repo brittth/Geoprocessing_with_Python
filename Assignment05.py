@@ -25,6 +25,7 @@ import time
 import ogr
 from shapely import geometry
 import random
+import geopandas as gpd
 
 # ####################################### SET TIME-COUNT ###################################################### #
 
@@ -35,15 +36,16 @@ print("")
 
 # ####################################### FOLDER PATHS & global variables ##################################### #
 
-ger_path = 'D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 7 - Vector processing II/Assignment05 - data/gadm36_GERonly.shp'
-pas_path = 'D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 7 - Vector processing II/Assignment05 - data/WDPA_May2018_polygons_GER_select10large.shp'
-sp_path  = 'D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 7 - Vector processing II/Assignment05 - data/OnePoint.shp'
+wd = 'D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 7 - Vector processing II/Assignment05 - data/'
+ger_path = 'gadm36_GERonly.shp'
+pas_path = 'WDPA_May2018_polygons_GER_select10large.shp'
+sp_path  = 'OnePoint.shp'
 
 # ####################################### PROCESSING ########################################################## #
 
-germany        = ogr.Open(ger_path)
-protected      = ogr.Open(pas_path)
-starting_point  = ogr.Open(sp_path)
+germany         = ogr.Open(wd + ger_path)
+protected       = ogr.Open(wd + pas_path)
+starting_point  = ogr.Open(wd + sp_path)
 
 ger = germany.GetLayer()
 pas = protected.GetLayer()
@@ -68,7 +70,11 @@ for pa in pas:
     #1) get pa
     print(pa.GetField('NAME')) #works
 
-    #2) TBC transform to EPSG 3035
+    #2) transform to EPSG 3035
+    tmp = gpd.GeoDataFrame.from_file(wd + pas_path)
+    PA_Lambert = tmp.to_crs(epsg=3035)
+    PA_Lambert.crs
+    PA_Lambert.to_file(wd + 'PA_Lambert.shp')
 
     #3) get extent of pa
     geom = pa.GetGeometryRef()#works
