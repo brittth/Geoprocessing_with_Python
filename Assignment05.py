@@ -73,7 +73,7 @@ for pa in pas:
     #2) transform to EPSG 3035
     tmp = gpd.GeoDataFrame.from_file(wd + pas_path)
     PA_Lambert = tmp.to_crs(epsg=3035)
-    PA_Lambert.crs
+    #PA_Lambert.crs #not necessary
     PA_Lambert.to_file(wd + 'PA_Lambert.shp')
     PA_Lambert = ogr.Open(wd + 'PA_Lambert.shp')
     paslam = PA_Lambert.GetLayer() #we need to keep using this, but how do we do this if 'pa' is the loop-element?
@@ -89,20 +89,26 @@ for pa in pas:
     minx, miny, maxx, maxy = pa_ext
     counter = 0
     pnt_list = []
-    while counter < 50:
-        pnt = geometry.Point(random.uniform(minx, maxx), random.uniform(miny, maxy))
-        pnt_list.append(pnt)
-        counter += 1
-    print(len(pnt_list)) #check if the while loop worked
-    print(pnt_list[1]) #check first point per PA
+    while counter < 5: #50, 5 as a test
+        #pnt = geometry.Point(random.uniform(minx, maxx), random.uniform(miny, maxy))   #Alternative 1 (shapely)-> doesn't work with ogr functions (e.g. Within)
+        pnt = ogr.Geometry(ogr.wkbPoint)                                                #Alternative 2+3 (OGR)
+        #pnt.AddPoint(random.uniform(minx, maxx), random.uniform(miny, maxy))           #Alternative 2 (OGR)-> adds 0 as third coordinate
+        pnt.SetPoint_2D(0, random.uniform(minx, maxx), random.uniform(miny, maxy))      #Alternative 3 (OGR)-> no third coordinate
         # TBC make sure it's a multitude of 30m
 
+        # 5) check if point within borders of PA (not extent) #works
+        if geom.Contains(pnt):
+            pnt_list.append(pnt)
+            counter += 1
+    print(len(pnt_list)) #check if the while loop worked
+    #print(pnt_list[0]) #check first point per PA
+    x, y = pnt_list[0].GetX(), pnt_list[0].GetY() #how to get coordinates from point
+
+
+
+
     # The following needs to be included into the function above (generate_random):
-    #5) check if point within borders of PA (not extent) #not checked yet
-    #if rp in rps:
-    #    return True
-    #else:
-    #    return False
+
 
     #6) check if point has min x meters distance to nearest border
         #find min distance to nearest border --> min_dist
