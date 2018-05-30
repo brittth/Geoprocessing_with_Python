@@ -36,7 +36,7 @@ print("")
 
 # ####################################### FOLDER PATHS & global variables ##################################### #
 
-wd = 'D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 7 - Vector processing II/Assignment05 - data/'
+wd       = 'D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 7 - Vector processing II/Assignment05 - data/'
 ger_path = 'gadm36_GERonly.shp'
 pas_path = 'WDPA_May2018_polygons_GER_select10large.shp'
 sp_path  = 'OnePoint.shp'
@@ -75,6 +75,8 @@ for pa in pas:
     PA_Lambert = tmp.to_crs(epsg=3035)
     PA_Lambert.crs
     PA_Lambert.to_file(wd + 'PA_Lambert.shp')
+    PA_Lambert = ogr.Open(wd + 'PA_Lambert.shp')
+    paslam = PA_Lambert.GetLayer() #we need to keep using this, but how do we do this if 'pa' is the loop-element?
 
     #3) get extent of pa
     geom = pa.GetGeometryRef()#works
