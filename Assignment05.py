@@ -58,9 +58,10 @@ def generate_random(number, polygon):
     minx, miny, maxx, maxy = polygon
     counter = 0
     while counter < number:
-        pnt = geometry.Point(random.uniform(minx, maxx), random.uniform(miny, maxy))
-        if pnt in polygon: #originally: if polygon.contains(pnt):
-            list_of_points.append(pnt)
+        pnt = ogr.Geometry(ogr.wkbPoint)
+        pnt.SetPoint_2D(0, random.uniform(minx, maxx), random.uniform(miny, maxy))
+        if geom.Contains(pnt):
+            pnt_list.append(pnt)
             counter += 1
     return list_of_points
 '''
@@ -89,12 +90,15 @@ for pa in pas:
     minx, miny, maxx, maxy = pa_ext
     counter = 0
     pnt_list = []
-    while counter < 5: #50, 5 as a test
+    while counter < 3: #50, 3 as a test
         #pnt = geometry.Point(random.uniform(minx, maxx), random.uniform(miny, maxy))   #Alternative 1 (shapely)-> doesn't work with ogr functions (e.g. Within)
         pnt = ogr.Geometry(ogr.wkbPoint)                                                #Alternative 2+3 (OGR)
         #pnt.AddPoint(random.uniform(minx, maxx), random.uniform(miny, maxy))           #Alternative 2 (OGR)-> adds 0 as third coordinate
         pnt.SetPoint_2D(0, random.uniform(minx, maxx), random.uniform(miny, maxy))      #Alternative 3 (OGR)-> no third coordinate
-        # TBC make sure it's a multitude of 30m
+
+        # make sure it's a multitude of 30m
+        #x_sp, y_sp = sp.GetX(), sp.GetY()  # error --> try to get coordinates of starting point
+        #print(x_sp)
 
         # 5) check if point within borders of PA (not extent) #works
         if geom.Contains(pnt):
@@ -105,11 +109,7 @@ for pa in pas:
     x, y = pnt_list[0].GetX(), pnt_list[0].GetY() #how to get coordinates from point
 
 
-
-
     # The following needs to be included into the function above (generate_random):
-
-
     #6) check if point has min x meters distance to nearest border
         #find min distance to nearest border --> min_dist
         #min_dist < 60 (@Arne: Was it 60m?)
