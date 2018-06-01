@@ -24,7 +24,6 @@
 import time
 import geopandas as gpd
 from osgeo import ogr
-from osgeo import gdal
 from osgeo import osr
 from osgeo import gdal
 import random
@@ -41,7 +40,7 @@ print("")
 
 # ####################################### FOLDER PATHS & global variables ##################################### #
 
-wd = "D:/UNI/Python/Assignment05/data/"
+wd = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 7 - Vector processing II/Assignment05 - data/"
 
 # ####################################### PROCESSING ########################################################## #
 
@@ -81,7 +80,7 @@ for pa in pas:
     # 3) create random points a multitude of 30m away from starting point
     x_min, x_max, y_min, y_max = pa_ext
     pnt_list = []
-    while len(pnt_list) < 3: #50, 3 as a test
+    while len(pnt_list) < 50: #50, 3 as a test
         # find range of x coords to draw random number
         seq_x_min = x_ori + (int((x_min - x_ori) / 30)) * 30
         seq_x_max = x_ori + (int((x_max - x_ori) / 30)) * 30
@@ -128,6 +127,148 @@ for pa in pas:
 # write random point sample to txt file in the wd
 pnt_df.to_csv(wd+"test.txt", index=None, sep=',', mode='a')
 
+
+# ####################################### create shapefile and layer ################################## #
+
+# .SHP
+# create a shapefile for polygons
+shapefile = driver.CreateDataSource(wd+'rnd_sample.shp')
+# set spatial reference
+spatialreference = ogr.osr.SpatialReference()
+spatialreference.ImportFromEPSG(3035)
+#create the layer
+layer = shapefile.CreateLayer('rnd_sample', spatialreference, ogr.wkbPolygon)
+layerDefinition = layer.GetLayerDefn()
+# add attributes to layer
+point_ID = ogr.FieldDefn('point_ID', ogr.OFTInteger)
+polygon_ID = ogr.FieldDefn('polygon_ID', ogr.OFTInteger)
+PA_name = ogr.FieldDefn('PA_name', ogr.OFTString)
+layer.CreateField(point_ID)
+layer.CreateField(polygon_ID)
+layer.CreateField(PA_name)
+
+# .KML
+kml_driver = ogr.GetDriverByName('KML')
+kml_file = kml_driver.CreateDataSource(wd + 'kml_rnd_sample.kml')
+sr_kml = ogr.osr.SpatialReference()
+sr_kml.ImportFromEPSG(3035)
+kml_layer = kml_file.CreateLayer('kml_rnd_sample', sr_kml, ogr.wkbPolygon)
+kml_layerDefinitions = kml_layer.GetLayerDefn()
+kml_layer.CreateField(point_ID)
+kml_layer.CreateField(polygon_ID)
+kml_layer.CreateField(PA_name)
+
+# ####################################### define a function ################################## #
+
+def GeometrytoFeature(n, m):
+    polygon = ogr.Geometry(ogr.wkbPolygon) # create a polygon
+    polygon.AddGeometry(ring) # add geometry to polygon
+
+    # create SHP
+    feature = ogr.Feature(layerDefinition) # greate a feature
+    feature.SetGeometry(polygon) # put geometry into feature
+    feature.SetField("point_ID", str(n)) # add attributes
+    feature.SetField("polygon_ID", str((n*10)+m)) # add attributes
+    feature.SetField("PA_name", pnt_df.iloc[n][1]) # add attributes
+    layer.CreateFeature(feature) # put feature in layer
+
+    # create KML
+    kml_feature = ogr.Feature(kml_layerDefinitions)  # greate a feature
+    kml_feature.SetGeometry(polygon)  # put geometry into feature
+    kml_feature.SetField("point_ID", str(n))  # add attributes
+    kml_feature.SetField("polygon_ID", str((n*10)+m))  # add attributes
+    kml_feature.SetField("PA_name", pnt_df.iloc[n][1])  # add attributes
+    kml_layer.CreateFeature(kml_feature)  # put feature in layer
+
+# ####################################### create polygons ################################## #
+
+for index, row in pnt_df.iterrows():
+    pnt_ID = row["ID"]
+    x_centre = row["X_COORD"]
+    y_centre = row["Y_COORD"]
+    # get the x-values and y-values
+    x1 = x_centre-45
+    x2 = x_centre-15
+    x3 = x_centre+15
+    x4 = x_centre+45
+    y1 = y_centre-45
+    y2 = y_centre-15
+    y3 = y_centre+15
+    y4 = y_centre+45
+    # create the middle polygon
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+    ring.AddPoint(x2, y3)
+    ring.AddPoint(x3, y3)
+    ring.AddPoint(x3, y2)
+    ring.AddPoint(x2, y2)
+    ring.AddPoint(x2, y3)  # repeat first point to close polygon
+    GeometrytoFeature(n=pnt_ID, m=1)
+    # upper-left
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+    ring.AddPoint(x1, y4)
+    ring.AddPoint(x2, y4)
+    ring.AddPoint(x2, y3)
+    ring.AddPoint(x1, y3)
+    ring.AddPoint(x1, y4)
+    GeometrytoFeature(n=pnt_ID, m=2)
+    # upper-middle
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+    ring.AddPoint(x2, y4)
+    ring.AddPoint(x3, y4)
+    ring.AddPoint(x3, y3)
+    ring.AddPoint(x2, y3)
+    ring.AddPoint(x2, y4)
+    GeometrytoFeature(n=pnt_ID, m=3)
+    # upper-right
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+    ring.AddPoint(x3, y4)
+    ring.AddPoint(x4, y4)
+    ring.AddPoint(x4, y3)
+    ring.AddPoint(x3, y3)
+    ring.AddPoint(x3, y4)
+    GeometrytoFeature(n=pnt_ID, m=4)
+    # middle-left
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+    ring.AddPoint(x1, y3)
+    ring.AddPoint(x2, y3)
+    ring.AddPoint(x2, y2)
+    ring.AddPoint(x1, y2)
+    ring.AddPoint(x1, y3)
+    GeometrytoFeature(n=pnt_ID, m=5)
+    # middle-right
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+    ring.AddPoint(x3, y3)
+    ring.AddPoint(x4, y3)
+    ring.AddPoint(x4, y2)
+    ring.AddPoint(x3, y2)
+    ring.AddPoint(x3, y3)
+    GeometrytoFeature(n=pnt_ID, m=6)
+    # lower-left
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+    ring.AddPoint(x1, y2)
+    ring.AddPoint(x2, y2)
+    ring.AddPoint(x2, y1)
+    ring.AddPoint(x1, y1)
+    ring.AddPoint(x1, y2)
+    GeometrytoFeature(n=pnt_ID, m=7)
+    # lower-middle
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+    ring.AddPoint(x2, y2)
+    ring.AddPoint(x3, y2)
+    ring.AddPoint(x3, y1)
+    ring.AddPoint(x2, y1)
+    ring.AddPoint(x2, y2)
+    GeometrytoFeature(n=pnt_ID, m=8)
+    # lower-right
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+    ring.AddPoint(x3, y2)
+    ring.AddPoint(x4, y2)
+    ring.AddPoint(x4, y1)
+    ring.AddPoint(x3, y1)
+    ring.AddPoint(x3, y2)
+    GeometrytoFeature(n=pnt_ID, m=9)
+
+shapefile = None
 
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
 
