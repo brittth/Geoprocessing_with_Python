@@ -24,21 +24,48 @@ tile3 = wd + 'Tile_x17999_y20999_1000x1000.tif'
 # ####################################### FUNCTIONS ########################################################## #
 
 #Function to get slices of any size from an array
-def make_slices(data, win_size):
+#def make_slices(data, win_size):
+def make_slices(data, rows, cols):
     """Return a list of slices given a window size.
     data - two-dimensional array to get slices from
     win_size - tuple of (rows, columns) for the moving window
     """
     # calculate slice size
-    rows = data.shape[0] - win_size[0] + 1
-    cols = data.shape[1] - win_size[1] + 1
+    #rows = data.shape[0] - win_size[0] + 1
+    #cols = data.shape[1] - win_size[1] + 1
+    #slices = []
+    #yrange = data.shape[0] - rows + 1
+    #xrange = data.shape[1] - cols + 1
+    xrange = rows*cols
+    yrange = int(data.shape[1]-(rows-1))
+    print(xrange)
+    print(yrange)
+    #arr = np.zeros(shape=(xrange,yrange))
     slices = []
+    #result_arr = np.empty((121,1),dtype=int)
     # create the slices
-    for i in range(win_size[0]):
-        for j in range(win_size[1]):
-            slices.append(data[i:rows+i, j:cols+j])
-    return slices
+    #for i in range(win_size[0]):
+    for i in range(data.shape[0]):
+        #for j in range(win_size[1]):
+        for j in range(data.shape[1]):
+            data_st = data[i:rows+i,j:cols+j]
+            arr1d = data_st.flatten()
+            slices.append(arr1d)
+            print(slices)
+            #result_arr = np.append(result_arr,[arr1d])
+            #print(result_arr)
+            #sl_arr = np.concatenate((arr1,arr2), axis = 0)
+            #slices.append(data[i:rows+i, j:cols+j])
+    #return slices
 
+ds = gdal.Open(tile1)
+band1 = ds.GetRasterBand(1)
+t1 = ds.GetRasterBand(1).ReadAsArray()
+w150 = int((150/30*2)+1)
+#print(w150)
+slices = make_slices(t1,w150,w150)
+print(slices)
+'''
 
 def make_raster(in_ds, fn, data, data_type, nodata=None):
     """Create a one-band GeoTIFF.
@@ -55,11 +82,11 @@ def make_raster(in_ds, fn, data, data_type, nodata=None):
     out_ds.SetGeoTransform(in_ds.GetGeoTransform())
     out_band = out_ds.GetRasterBand(1)
     if nodata is not None:
-    out_band.SetNoDataValue(nodata)
-    out_band.WriteArray(data)
-    out_band.FlushCache()
-    out_band.ComputeStatistics(False)
-    return out_ds
+        out_band.SetNoDataValue(nodata)
+        out_band.WriteArray(data)
+        out_band.FlushCache()
+        out_band.ComputeStatistics(False)
+        return out_ds
 
 
 # ####################################### PROCESSING ########################################################## #
@@ -79,42 +106,54 @@ t3 = ds.GetRasterBand(1).ReadAsArray()
 
 #calculate window size in pixels
 w150 = int((150/30*2)+1)
-w300 = (300/30*2)+1
-w450 = (450/30*2)+1
+print(w150)
+w300 = int((300/30*2)+1)
+w450 = int((450/30*2)+1)
 
 #make window slices --> make_slices(data, win_size)
-slices = make_slices(t1,(w150,w150))
+slices = make_slices(t1,w150,w150)
+print(slices)
 stacked_data = np.ma.dstack(slices)
-rows, cols = band1.YSize, band1.XSize #check size raster
-out_data = np.ones((rows, cols), np.int32) * -99 #raster in original size with only -99 pixel values
+#rows, cols = band1.YSize, band1.XSize #check size raster
+#out_data = np.ones((rows, cols), np.int32) * -99 #raster in original size with only -99 pixel values
 
 # compute SHDI from tif image
-in_fn = tile1
-out_fn = 'SHDI_Tile_x26999_y12999_1000x1000.tif'
-ds = gdal.Open(in_fn)
+#in_fn = tile1
+#out_fn = 'SHDI_Tile_x26999_y12999_1000x1000.tif'
+#ds = gdal.Open(in_fn)
 # in_band = ds.GetRasterBand(1)
     #pixel count of relevant categories
-pixnum = band1.YSize * band1.XSize
 
 cat_list = [1, 17, 2, 3, 5, 11, 13, 18 , 19]
-bla = []
+counter = 0
 for slice in slices:
-    for pixel in slice:
-        for cat in cat_list:
-            if pixel == cat:
+    #calculate category proportions per slice/window
+    print(slice.shape)
+    counter += 1
+    unique, counts = np.unique(slice, return_counts=True)
+    allcat_dict = dict(zip(unique, counts))
 
+    #calculate proportion of all relevant categories
+    sum_dict = {}
+    for cat in cat_list:
+        if cat in allcat_dict:
+            sum_dict.update({cat: allcat_dict[cat]})
+    allcat_sum = sum(sum_dict.values())
 
-    # define SHDI function: SHDI = −SUM[m,i=1] (Pi*lnPi)
-cat_list = [1, 17, 2, 3, 5, 11, 13, 18 , 19]
-result = []
-for cat in cat_list:
-    p = count(cat) / count(allcat)
-    value = (p * np.log(p))
-    result.append(value)
-shdi = (-1) * sum(result)
+    # calculate proportion of each relevant categories
+    result = []
+    for cat in cat_list:
+        if cat in allcat_dict:
+            prop = (allcat_dict[cat]/allcat_sum)
+            print('Proportion of Category ' + str(cat) + ' in Slice ' + str(counter) + ': ' + str(prop))
 
-#calculate shdi
-out_data[5:-5, 5:-5] = #eigene function np.mean(stacked_data, 2)
+            # define SHDI function: SHDI = −SUM[m,i=1] (Pi*lnPi)
+            value = (prop * np.log(prop))
+            result.append(value)
+    shdi = (-1) * sum(result)
+    print(shdi)
+
+#out_data[5:-5, 5:-5] = #eigene function np.mean(stacked_data, 2)
 
 pb.make_raster(in_ds, out_fn, out_data, gdal.GDT_Int32, -99)
 del in_ds
@@ -132,7 +171,7 @@ ndvi = ndvi.filled(-99) #fill the empty cells
 #overviews = pb.compute_overview_levels(out_ds.GetRasterBand(1))
 #out_ds.BuildOverviews('average', overviews)
 #del ds, out_ds
-
+'''
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
 
 print("")
