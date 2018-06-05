@@ -43,7 +43,7 @@ def make_slices(data, rows, cols):
     sl_arr = np.asarray(slices)
     return(sl_arr)
 
-ds = gdal.Open(tile1)
+ds = gdal.Open(tile3)
 t3 = np.array(ds.ReadAsArray())
 w150 = int((150/30*2)+1)
 slices = make_slices(t3,11,11)
