@@ -26,44 +26,27 @@ tile3 = wd + 'Tile_x17999_y20999_1000x1000.tif'
 #Function to get slices of any size from an array
 #def make_slices(data, win_size):
 def make_slices(data, rows, cols):
-    """Return a list of slices given a window size.
-    data - two-dimensional array to get slices from
-    win_size - tuple of (rows, columns) for the moving window
-    """
-    # calculate slice size
-    #rows = data.shape[0] - win_size[0] + 1
-    #cols = data.shape[1] - win_size[1] + 1
-    #slices = []
-    #yrange = data.shape[0] - rows + 1
-    #xrange = data.shape[1] - cols + 1
-    xrange = rows*cols
-    yrange = int(data.shape[1]-(rows-1))
-    print(xrange)
-    print(yrange)
-    #arr = np.zeros(shape=(xrange,yrange))
+    yrange = data.shape[0] - rows + 1
+    xrange = data.shape[1] - cols + 1
+    #print(xrange)
+    #print(yrange)
     slices = []
-    #result_arr = np.empty((121,1),dtype=int)
-    # create the slices
-    #for i in range(win_size[0]):
-    for i in range(data.shape[0]):
-        #for j in range(win_size[1]):
-        for j in range(data.shape[1]):
+    counter = 0
+    for i in range(xrange):
+        counter += 1
+        for j in range(yrange):
             data_st = data[i:rows+i,j:cols+j]
             arr1d = data_st.flatten()
             slices.append(arr1d)
-            print(slices)
-            #result_arr = np.append(result_arr,[arr1d])
-            #print(result_arr)
-            #sl_arr = np.concatenate((arr1,arr2), axis = 0)
-            #slices.append(data[i:rows+i, j:cols+j])
-    #return slices
+            #print(slices)
+    print(counter)
+    sl_arr = np.asarray(slices)
+    return(sl_arr)
 
 ds = gdal.Open(tile1)
-band1 = ds.GetRasterBand(1)
-t1 = ds.GetRasterBand(1).ReadAsArray()
+t3 = np.array(ds.ReadAsArray())
 w150 = int((150/30*2)+1)
-#print(w150)
-slices = make_slices(t1,w150,w150)
+slices = make_slices(t3,11,11)
 print(slices)
 '''
 
