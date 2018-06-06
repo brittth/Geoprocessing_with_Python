@@ -125,7 +125,7 @@ sl3_150 = make_slices(t3,w150,w150)
 cat_list = [1, 17, 2, 3, 5, 11, 13, 18, 19]
 #np.apply_along_axis(calculateSHDI(cat_list, sl3_150), 1, sl3_150) #--> ERROR
 counter = 0
-for i in sl3_150:
+for i in sl3_150: #if loop directly in function above, then error
     counter += 1
     print('\nSlice #',counter,':')
     shdi = calculateSHDI(cat_list,sl3_150[i])
