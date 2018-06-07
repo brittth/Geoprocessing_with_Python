@@ -35,7 +35,7 @@ def make_slices(data, rows, cols):
         for j in range(yrange):
             data_st = data[i:rows+i,j:cols+j]
             arr1d = data_st.flatten()
-        slices.append(arr1d)
+        slices.append(arr1d) #indent one more to the right for 980100
     print('\nWindow size: (',rows,',',cols,')')
     print('Number of windows: ',counter)
     sl_arr = np.asarray(slices)
@@ -58,7 +58,7 @@ def calculateSHDI(category_list,slice_arr):
     for cat in cat_list:
         if cat in allcat_dict:
             prop = (allcat_dict[cat] / allcat_sum)
-            print('Proportion of Category ' + str(cat) + ': ' + str(prop))
+            #print('Proportion of Category ' + str(cat) + ': ' + str(prop))
             # define SHDI function: SHDI = −SUM[m,i=1] (Pi*lnPi)
             value = (prop * np.log(prop))
             result.append(value)
@@ -125,10 +125,23 @@ sl3_150 = make_slices(t3,w150,w150)
 cat_list = [1, 17, 2, 3, 5, 11, 13, 18, 19]
 #np.apply_along_axis(calculateSHDI(cat_list, sl3_150), 1, sl3_150) #--> ERROR
 counter = 0
+shdi_list = []
+
 for i in sl3_150: #if loop directly in function above, then error
     counter += 1
     print('\nSlice #',counter,':')
     shdi = calculateSHDI(cat_list,sl3_150[i])
+    shdi_list.append(shdi) #save shdi values in list
+
+#create array to fill with shdi values from list --> nothing here works
+arr = np.zeros((990, 121))
+for i in shdi_list:
+    for j in arr:
+        arr[j]= shdi_list[i:i*120]
+#arr = np.append(arr, shdi_list, axis=0)
+print(arr.shape)
+print(arr)
+
 
 #stacked_data = np.ma.dstack(slices)
 #rows, cols = band1.YSize, band1.XSize #check size raster
