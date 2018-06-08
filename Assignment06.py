@@ -143,15 +143,73 @@ for i in sl3_150: #if loop directly in function above, then error
 print(len(shdi_list))
 
 # divide shdi_list into chucks of 990 length
-shdi_chunks = list(chunks(shdi_list, 990)) #list of 1 list with 990 values
+shdi_chunks = list(chunks(shdi_list, 990)) #list of 1 list with 990 values, should be more when more than 1 row is considered
 print(shdi_chunks)
 print(len(shdi_chunks))
 
 #convert shdi_chunks into an array
 shdi_arr = np.asarray(shdi_chunks)
 print(shdi_arr.shape)
+print(shdi_arr.dtype)
 
 #convert array to raster and write to disc
+#outfile = drvR.Create(outPath, cols, rows, 1, gdal.GDT_Float32) #robert(forum)
+'''
+# ATTEMPT 3 FROM STACKOVERFLOW WEBSITE
+arr = np.zeros(100).reshape(10,10)
+arr2 = np.ones(4).reshape(2,2)
+arr[4:6, 4:6] = arr2
+print(arr)
+'''
+
+# ATTEMPT 2 FROM COOKBOOK WEBSITE
+def array2raster(newRasterfn,rasterOrigin,pixelWidth,pixelHeight,array):
+    cols = array.shape[1]
+    rows = array.shape[0]
+    originX = rasterOrigin[0]
+    originY = rasterOrigin[1]
+
+    driver = gdal.GetDriverByName('GTiff')
+    outRaster = driver.Create(newRasterfn, cols, rows, 1, gdal.GDT_Byte)
+    outRaster.SetGeoTransform((originX, pixelWidth, 0, originY, 0, pixelHeight))
+    outband = outRaster.GetRasterBand(1)
+    outband.WriteArray(array)
+    outRasterSRS = osr.SpatialReference()
+    outRasterSRS.ImportFromEPSG(4326)
+    outRaster.SetProjection(outRasterSRS.ExportToWkt())
+    outband.FlushCache()
+result = array2raster(newRasterfn,rasterOrigin,pixelWidth,pixelHeight,array)
+print(result)
+
+''' # ATTEMPT 1 FROM BOOK CHAPTER 
+"""Create a one-band GeoTIFF.
+in_ds - datasource to copy projection and geotransform from
+fn - path to the file to create
+data - NumPy array containing data to write
+data_type - output data type
+nodata - optional NoData value
+"""
+in_ds = tile3
+fn = wd
+data = shdi_arr
+data_type = gdal.GDT_Float32
+nodata = -999
+
+driver = gdal.GetDriverByName('GTiff')
+out_ds = driver.Create(fn, in_ds.RasterXSize, in_ds.RasterYSize, 1, data_type)
+out_ds.SetProjection(in_ds.GetProjection())
+out_ds.SetGeoTransform(in_ds.GetGeoTransform())
+out_band = out_ds.GetRasterBand(1)
+if nodata is not None:
+    out_band.SetNoDataValue(nodata)
+    out_band.WriteArray(data)
+    out_band.FlushCache()
+    out_band.ComputeStatistics(False)
+    #return out_ds
+
+'''
+
+
 
 #####################  ARCHIVE  #####################
 #stacked_data = np.ma.dstack(slices)
@@ -187,7 +245,7 @@ ndvi = ndvi.filled(-99) #fill the empty cells
 #del ds, out_ds
 '''
 
-#outfile = drvR.Create(outPath, cols, rows, 1, gdal.GDT_Float32) #robert(forum)
+
 
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
 
