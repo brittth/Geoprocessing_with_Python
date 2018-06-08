@@ -33,9 +33,10 @@ def make_slices(data, rows, cols):
     for i in range(xrange):
         counter += 1
         for j in range(yrange):
+            # counter += 1
             data_st = data[i:rows+i,j:cols+j]
             arr1d = data_st.flatten()
-        slices.append(arr1d) #indent one more to the right for 980100
+        slices.append(arr1d) #indent one more to the right for 980100 --> AS IS, SLICES ONLY FOR FIRST ROW
     print('\nWindow size: (',rows,',',cols,')')
     print('Number of windows: ',counter)
     sl_arr = np.asarray(slices)
@@ -65,6 +66,14 @@ def calculateSHDI(category_list,slice_arr):
     shdi = (-1) * sum(result)
     print('SHDI: ',shdi)
     return shdi
+
+# Create a function called "chunks" with two arguments, l and n:
+def chunks(l, n):
+    # For item i in a range that is a length of l,
+    for i in range(0, len(l), n):
+        # Create an index range for l of n items:
+        yield l[i:i+n]
+
 '''
 def make_raster(in_ds, fn, data, data_type, nodata=None):
     """Create a one-band GeoTIFF.
@@ -121,28 +130,30 @@ sl3_150 = make_slices(t3,w150,w150)
 #sl3_300 = make_slices(t3,w300,w300)
 #sl3_450 = make_slices(t3,w450,w450)
 
-# calculate category proportions
+# calculate shdi for each slice
 cat_list = [1, 17, 2, 3, 5, 11, 13, 18, 19]
 #np.apply_along_axis(calculateSHDI(cat_list, sl3_150), 1, sl3_150) #--> ERROR
 counter = 0
 shdi_list = []
-
 for i in sl3_150: #if loop directly in function above, then error
     counter += 1
     print('\nSlice #',counter,':')
     shdi = calculateSHDI(cat_list,sl3_150[i])
     shdi_list.append(shdi) #save shdi values in list
+print(len(shdi_list))
 
-#create array to fill with shdi values from list --> nothing here works
-arr = np.zeros((990, 121))
-for i in shdi_list:
-    for j in arr:
-        arr[j]= shdi_list[i:i*120]
-#arr = np.append(arr, shdi_list, axis=0)
-print(arr.shape)
-print(arr)
+# divide shdi_list into chucks of 990 length
+shdi_chunks = list(chunks(shdi_list, 990)) #list of 1 list with 990 values
+print(shdi_chunks)
+print(len(shdi_chunks))
 
+#convert shdi_chunks into an array
+shdi_arr = np.asarray(shdi_chunks)
+print(shdi_arr.shape)
 
+#convert array to raster and write to disc
+
+#####################  ARCHIVE  #####################
 #stacked_data = np.ma.dstack(slices)
 #rows, cols = band1.YSize, band1.XSize #check size raster
 #out_data = np.ones((rows, cols), np.int32) * -99 #raster in original size with only -99 pixel values
@@ -175,6 +186,9 @@ ndvi = ndvi.filled(-99) #fill the empty cells
 #out_ds.BuildOverviews('average', overviews)
 #del ds, out_ds
 '''
+
+#outfile = drvR.Create(outPath, cols, rows, 1, gdal.GDT_Float32) #robert(forum)
+
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
 
 print("")
