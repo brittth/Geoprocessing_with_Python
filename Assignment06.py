@@ -158,7 +158,7 @@ cat_list = [1, 17, 2, 3, 5, 11, 13, 18, 19]
 
 #TILE1
 FromSlicetoRaster(sl1_150, cat_list, w150, 'Dataset: sl1_150', '1_150.tif', tile1)
-#FromSlicetoRaster(sl1_300, cat_list, w300, 'Dataset: sl1_300', '1_300.tif', tile1)
+FromSlicetoRaster(sl1_300, cat_list, w300, 'Dataset: sl1_300', '1_300.tif', tile1)
 FromSlicetoRaster(sl1_450, cat_list, w450, 'Dataset: sl1_450', '1_450.tif', tile1)
 
 #TILE2
@@ -171,59 +171,6 @@ FromSlicetoRaster(sl3_150, cat_list, w150, 'Dataset: sl3_150', '3_150.tif', tile
 FromSlicetoRaster(sl3_300, cat_list, w300, 'Dataset: sl3_300', '3_300.tif', tile3)
 FromSlicetoRaster(sl3_450, cat_list, w450, 'Dataset: sl3_450', '3_450.tif', tile3)
 
-
-'''
-# TILE1
-    # calculate shdi for each slice and write into an array
-shdi_arr_sl1_150 = CalculateSHDI2Array(sl1_150,cat_list,w150,'Dataset: sl1_150')
-    # insert smaller array into a larger zeros array
-arr_sl1_150 = insertArray(shdi_arr_sl1_150, w150)
-print('The smaller arrays of size',shdi_arr_sl1_150.shape,'was inserted into the larger array of size',arr_sl1_150.shape,'.')
-    #convert array to raster and write to disc
-Array2Raster('1_150.tif', tile1, 0, 0, arr_sl1_150, gdal.GDT_Float64)
-
-shdi_arr_sl1_300 = CalculateSHDI2Array(sl1_300,cat_list,w300,'Dataset: sl1_300')
-arr_sl1_300 = insertArray(shdi_arr_sl1_300, w300)
-print('The smaller arrays of size',shdi_arr_sl1_300.shape,'was inserted into the larger array of size',arr_sl1_300.shape,'.')
-Array2Raster('1_300.tif', tile1, 0, 0, arr_sl1_300, gdal.GDT_Float64)
-
-shdi_arr_sl1_450 = CalculateSHDI2Array(sl1_450,cat_list,w450,'Dataset: sl1_450')
-arr_sl1_450 = insertArray(shdi_arr_sl1_450, w450)
-print('The smaller arrays of size',shdi_arr_sl1_450.shape,'was inserted into the larger array of size',arr_sl1_450.shape,'.')
-Array2Raster('1_450.tif', tile1, 0, 0, arr_sl1_450, gdal.GDT_Float64)
-
-# TILE2
-shdi_arr_sl2_150 = CalculateSHDI2Array(sl2_150,cat_list,w150,'Dataset: sl2_150')
-arr_sl2_150 = insertArray(shdi_arr_sl2_150, w150)
-print('The smaller arrays of size',shdi_arr_sl2_150.shape,'was inserted into the larger array of size',arr_sl2_150.shape,'.')
-Array2Raster('2_150.tif', tile2, 0, 0, arr_sl2_150, gdal.GDT_Float64)
-
-shdi_arr_sl2_300 = CalculateSHDI2Array(sl2_300,cat_list,w300,'Dataset: sl2_300')
-arr_sl2_300 = insertArray(shdi_arr_sl2_300, w300)
-print('The smaller arrays of size',shdi_arr_sl2_300.shape,'was inserted into the larger array of size',arr_sl2_300.shape,'.')
-Array2Raster('2_300.tif', tile2, 0, 0, arr_sl2_300, gdal.GDT_Float64)
-
-shdi_arr_sl2_450 = CalculateSHDI2Array(sl2_450,cat_list,w450,'Dataset: sl2_450')
-arr_sl2_450 = insertArray(shdi_arr_sl2_450, w450)
-print('The smaller arrays of size',shdi_arr_sl2_450.shape,'was inserted into the larger array of size',arr_sl2_450.shape,'.')
-Array2Raster('2_450.tif', tile2, 0, 0, arr_sl2_450, gdal.GDT_Float64)
-
-# TILE3
-shdi_arr_sl3_150 = CalculateSHDI2Array(sl3_150,cat_list,w150,'Dataset: sl3_150')
-arr_sl3_150 = insertArray(shdi_arr_sl3_150, w150)
-print('The smaller arrays of size',shdi_arr_sl3_150.shape,'was inserted into the larger array of size',arr_sl3_150.shape,'.')
-Array2Raster('3_150.tif', tile3, 0, 0, arr_sl3_150, gdal.GDT_Float64)
-
-shdi_arr_sl3_300 = CalculateSHDI2Array(sl3_300,cat_list,w300,'Dataset: sl3_300')
-arr_sl3_300 = insertArray(shdi_arr_sl3_300, w300)
-print('The smaller arrays of size',shdi_arr_sl3_300.shape,'was inserted into the larger array of size',arr_sl3_300.shape,'.')
-Array2Raster('3_300.tif', tile3, 0, 0, arr_sl3_300, gdal.GDT_Float64)
-
-shdi_arr_sl3_450 = CalculateSHDI2Array(sl3_450,cat_list,w450,'Dataset: sl3_450')
-arr_sl3_450 = insertArray(shdi_arr_sl3_450, w450)
-print('The smaller arrays of size',shdi_arr_sl3_450.shape,'was inserted into the larger array of size',arr_sl3_450.shape,'.')
-Array2Raster('3_450.tif', tile3, 0, 0, arr_sl3_450, gdal.GDT_Float64)
-'''
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
 
 print("")
@@ -234,7 +181,7 @@ print("start: " + starttime)
 print("end: " + endtime)
 print("")
 
-    #smaller test array for demonstration --> works perfectly
+    #smaller test array for demonstration of insertArray --> works perfectly
 #arr3 = np.zeros(25).reshape(5,5)
 #print(arr3.shape)
 #arr4 = np.ones(9).reshape(3,3)
@@ -242,72 +189,3 @@ print("")
 #arr3[1:4,1:4] = arr4
 #print(arr3.shape)
 #print(arr3)
-
-'''
-# PREVIOUS ATTEMPT
-data_list = [sl1_150,sl1_300,sl1_450,sl2_150,sl2_300,sl2_450,sl3_150,sl3_300,sl3_450]
-shdi_list_list = [0] * 9
-iter = 0
-for element in data_list:
-    counter = 0
-    shdi_list =[]
-    print('Dataset # ',iter)
-    for i in element: #if loop directly in function above, then error
-        counter += 1
-        print('\nSlice #',counter,':')
-        shdi = calculateSHDI(cat_list,element[i])
-        shdi_list.append(shdi) #save shdi values in list
-    shdi_list_list[iter] = shdi_list
-    iter += 1
-#print(shdi_list_list)
-
-shdi_list_sl1_150 = shdi_list_list[0]
-shdi_list_sl1_300 = shdi_list_list[1]
-#shdi_list_sl1_450 = shdi_list_list[2]
-
-shdi_list_sl2_150 = shdi_list_list[3]
-shdi_list_sl2_300 = shdi_list_list[4]
-#shdi_list_sl2_450 = shdi_list_list[5]
-
-shdi_list_sl3_150 = shdi_list_list[6]
-shdi_list_sl3_300 = shdi_list_list[7]
-#shdi_list_sl3_450 = shdi_list_list[8]
-
-shdi_list_list.clear() #delete list
-print('SHDI List created')
-
-# divide shdi_list into chucks of certain length
-shdi_chunks_sl1_150 = list(chunks(shdi_list, (1000-w150+1))) #list of 990 lists with 990 values
-shdi_chunks_sl2_150 = list(chunks(shdi_list, (1000-w150+1))) #list of 951 lists with 990 values --> causes error later
-shdi_chunks_sl3_150 = list(chunks(shdi_list, (1000-w150+1))) #list of 951 lists with 990 values --> causes error later
-print('SHDI Lists in chunks created with chunk length of ', len(shdi_chunks_sl3_150),'.')
-
-shdi_chunks_sl1_300 = list(chunks(shdi_list, (1000-w300+1))) #list of 961 lists with 980 values --> causes error later
-shdi_chunks_sl2_300 = list(chunks(shdi_list, (1000-w300+1))) #list of 961 lists with 980 values --> causes error later
-shdi_chunks_sl3_300 = list(chunks(shdi_list, (1000-w300+1))) #list of 961 lists with 980 values --> causes error later
-print('SHDI Lists in chunks created with chunk length of ', len(shdi_chunks_sl3_300),'.')
-
-shdi_chunks_sl1_450 = list(chunks(shdi_list, (1000-w450+1))) #list of 970 lists with 970 values
-shdi_chunks_sl2_450 = list(chunks(shdi_list, (1000-w450+1)))
-shdi_chunks_sl3_450 = list(chunks(shdi_list, (1000-w450+1)))
-print('SHDI Lists in chunks created with chunk length of ', len(shdi_chunks_sl3_450),'.')
-
-#convert shdi_chunks into an array
-shdi_arr_sl1_150 = np.asarray(shdi_chunks_sl1_150)
-shdi_arr_sl2_150 = np.asarray(shdi_chunks_sl2_150)
-shdi_arr_sl3_150 = np.asarray(shdi_chunks_sl3_150)
-print('The SHDI arrays have a shape of:',shdi_arr_sl3_150.shape)
-print('The SHDI arrays have the data type: ',shdi_arr_sl3_150.dtype)
-
-shdi_arr_sl1_300 = np.asarray(shdi_chunks_sl1_300)
-shdi_arr_sl2_300 = np.asarray(shdi_chunks_sl2_300)
-shdi_arr_sl3_300 = np.asarray(shdi_chunks_sl3_300)
-print('The SHDI arrays have a shape of:',shdi_arr_sl3_300.shape)
-print('The SHDI arrays have the data type: ',shdi_arr_sl3_300.dtype)
-
-shdi_arr_sl1_450 = np.asarray(shdi_chunks_sl1_450)
-shdi_arr_sl2_450 = np.asarray(shdi_chunks_sl2_450)
-shdi_arr_sl3_450 = np.asarray(shdi_chunks_sl3_450)
-print('The SHDI arrays have a shape of:',shdi_arr_sl3_450.shape)
-print('The SHDI arrays have the data type: ',shdi_arr_sl3_450.dtype)
-'''
