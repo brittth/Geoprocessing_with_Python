@@ -122,7 +122,9 @@ def FromSlicetoRaster(slices,cat_list,windows_size, message_string,outfile_name,
     print('The smaller arrays of size', shdi_arr.shape, 'was inserted into the larger array of size',arr.shape, '.')
     # convert array to raster and write to disc
     Array2Raster(outfile_name, originfile_path, 0, 0, arr, gdal.GDT_Float64)
+
 # ####################################### PROCESSING ########################################################## #
+
 # Moving window sizes:(a) 150m, (b) 300m, and (c) 450m
 # Shannon’s diversity index: SHDI = −SUM[m,i=1] (Pi*lnPi)
 # 1, 17 --> Forest
