@@ -155,27 +155,24 @@ sl3_300 = make_slices(t3,w300,w300)
 sl3_450 = make_slices(t3,w450,w450)
 
 cat_list = [1, 17, 2, 3, 5, 11, 13, 18, 19]
+
+#TILE1
+FromSlicetoRaster(sl1_150, cat_list, w150, 'Dataset: sl1_150', '1_150.tif', tile1)
+#FromSlicetoRaster(sl1_300, cat_list, w300, 'Dataset: sl1_300', '1_300.tif', tile1)
+FromSlicetoRaster(sl1_450, cat_list, w450, 'Dataset: sl1_450', '1_450.tif', tile1)
+
+#TILE2
+FromSlicetoRaster(sl2_150, cat_list, w150, 'Dataset: sl2_150', '2_150.tif', tile2)
+FromSlicetoRaster(sl2_300, cat_list, w300, 'Dataset: sl2_300', '2_300.tif', tile2)
+FromSlicetoRaster(sl2_450, cat_list, w450, 'Dataset: sl2_450', '2_450.tif', tile2)
+
+#TILE3
+FromSlicetoRaster(sl3_150, cat_list, w150, 'Dataset: sl3_150', '3_150.tif', tile3)
+FromSlicetoRaster(sl3_300, cat_list, w300, 'Dataset: sl3_300', '3_300.tif', tile3)
+FromSlicetoRaster(sl3_450, cat_list, w450, 'Dataset: sl3_450', '3_450.tif', tile3)
+
+
 '''
-data_list = [sl1_150,sl1_300,sl1_450,sl2_150,sl2_300,sl2_450,sl3_150,sl3_300,sl3_450]
-windos_size_list = [w150,w300,w450,w150,w300,w450,w150,w300,w450]
-message_string_list = ['Dataset: sl1_150','Dataset: sl1_300','Dataset: sl1_450',
-                       'Dataset: sl2_150','Dataset: sl2_300','Dataset: sl2_450',
-                       'Dataset: sl3_150','Dataset: sl3_300','Dataset: sl3_450']
-outfile_name_list =['1_150.tif','1_300.tif','1_450.tif',
-                    '2_150.tif','2_300.tif','2_450.tif',
-                    '3_150.tif','3_300.tif','3_450.tif']
-originfile_path_list =[tile1,tile1,tile1,
-                       tile2,tile2,tile2,
-                       tile3,tile3,tile3]
-
-for slices in data_list:
-    for windows_size in windos_size_list:
-        for message_string in message_string_list:
-            for outfile_name in outfile_name_list:
-                for originfile_path in originfile_path_list:
-                    FromSlicetoRaster(slices, cat_list, windows_size, message_string, outfile_name, originfile_path)
-
-
 # TILE1
     # calculate shdi for each slice and write into an array
 shdi_arr_sl1_150 = CalculateSHDI2Array(sl1_150,cat_list,w150,'Dataset: sl1_150')
@@ -184,7 +181,7 @@ arr_sl1_150 = insertArray(shdi_arr_sl1_150, w150)
 print('The smaller arrays of size',shdi_arr_sl1_150.shape,'was inserted into the larger array of size',arr_sl1_150.shape,'.')
     #convert array to raster and write to disc
 Array2Raster('1_150.tif', tile1, 0, 0, arr_sl1_150, gdal.GDT_Float64)
-'''
+
 shdi_arr_sl1_300 = CalculateSHDI2Array(sl1_300,cat_list,w300,'Dataset: sl1_300')
 arr_sl1_300 = insertArray(shdi_arr_sl1_300, w300)
 print('The smaller arrays of size',shdi_arr_sl1_300.shape,'was inserted into the larger array of size',arr_sl1_300.shape,'.')
@@ -226,7 +223,7 @@ shdi_arr_sl3_450 = CalculateSHDI2Array(sl3_450,cat_list,w450,'Dataset: sl3_450')
 arr_sl3_450 = insertArray(shdi_arr_sl3_450, w450)
 print('The smaller arrays of size',shdi_arr_sl3_450.shape,'was inserted into the larger array of size',arr_sl3_450.shape,'.')
 Array2Raster('3_450.tif', tile3, 0, 0, arr_sl3_450, gdal.GDT_Float64)
-
+'''
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
 
 print("")
