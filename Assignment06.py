@@ -33,7 +33,6 @@ def make_slices(data, rows, cols):
     for i in range(xrange):
         counter += 1
         for j in range(yrange):
-            # counter += 1
             data_st = data[i:rows+i,j:cols+j]
             arr1d = data_st.flatten()
             slices.append(arr1d) #indent one more to the right for 980100 --> AS IS, SLICES ONLY FOR FIRST ROW
@@ -80,6 +79,8 @@ def CalculateSHDI2Array(slices,cat_list,windows_size, message_string):
     for i in slices: #if loop directly in function above, then error
         counter += 1
         print(message_string)
+        #if counter%1000 == 0:
+        #   print('\nSlice #',counter,':')
         print('\nSlice #',counter,':')
         shdi = calculateSHDI(cat_list,slices[i])
         shdi_list.append(shdi) #save shdi values in list
