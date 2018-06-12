@@ -2,9 +2,8 @@
 
 import time
 import os
-import gdal
-import geopandas as gpd
-from osgeo import ogr
+import pandas as pd
+from osgeo import gdal, ogr, osr
 import struct
 
 # ####################################### SET TIME-COUNT ###################################################### #
@@ -18,97 +17,126 @@ print("")
 
 wd = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week 9 - Real-world problems II/Assignment07_data/"
 pts = wd + 'Points.shp'
-og = wd + 'Old_Growth.shp'
-prl = wd + 'PrivateLands.shp'
-el = wd + 'Elevation.tif'
-dist = wd + 'DistToRoad.tif'
+ogro = wd + 'Old_Growth.shp'
+prla = wd + 'PrivateLands.shp'
+elev = wd + 'Elevation.tif'
+distr = wd + 'DistToRoad.tif'
 
 # ####################################### FUNCTIONS ########################################################## #
 
-def reprojectSHP2Lambert(file_path, outfile_name):
-    ds = gpd.read_file(file_path)
-    ds_lambert = ds.to_crs({'init': 'EPSG:3035'})
-    ds_lambert.to_file(wd + outfile_name)
-    driver = ogr.GetDriverByName('ESRI Shapefile')
-    ds_pr = driver.Open(wd + outfile_name, 0)
-    ds_pr = ds_pr.GetLayer()
-    return ds_pr
-
-def reprojectSHP2WGS84(file_path, outfile_name):
-    ds = gpd.read_file(file_path)
-    ds_lambert = ds.to_crs({'init': 'EPSG:4326'})
-    ds_lambert.to_file(wd + outfile_name)
-    driver = ogr.GetDriverByName('ESRI Shapefile')
-    ds_pr = driver.Open(wd + outfile_name, 0)
-    ds_pr = ds_pr.GetLayer()
-    return ds_pr
-
 # ####################################### PROCESSING ########################################################## #
 
+#Shapefiles
 driver = ogr.GetDriverByName('ESRI Shapefile')
-points = driver.Open(pts)
+points = driver.Open(pts,1)
+og = driver.Open(ogro, 1)
+prl = driver.Open(prla,1)
 pts_ly = points.GetLayer()
+og_ly = og.GetLayer()
+prl_ly = prl.GetLayer()
 
+#Raster files
+el = gdal.Open(elev)
+dist = gdal.Open(distr)
+
+source_SR = pts_ly.GetSpatialRef()         # get spatial reference from sample layer
+
+#Elevation
+pr_el = el.GetProjection()               # get projection from raster
+target_SR_el = osr.SpatialReference()         # create empty spatial reference
+target_SR_el.ImportFromWkt(pr_el)             # get spatial reference from projection of raster
+coordTrans_el = osr.CoordinateTransformation(source_SR, target_SR_el)     # transformation rule for coordinates from samples to elevation raster
+
+#DistToRoads
+pr_dist = dist.GetProjection()           # get projection from raster
+target_SR_dist = osr.SpatialReference()       # create empty spatial reference
+target_SR_dist.ImportFromWkt(pr_dist)         # get spatial reference from projection of raster
+coordTrans_dist = osr.CoordinateTransformation(source_SR, target_SR_dist) # transformation rule for coordinates from samples to roads raster
+
+#OldGrowth
+target_SR_og = og_ly.GetSpatialRef()         # create empty spatial reference
+coordTrans_og = osr.CoordinateTransformation(source_SR, target_SR_og)     # transformation rule for coordinates from samples to shapefile
+
+#PrivateLands
+target_SR_prl = prl_ly.GetSpatialRef()       # create empty spatial reference
+coordTrans_prl = osr.CoordinateTransformation(source_SR, target_SR_prl) # transformation rule for coordinates from samples to shapefile
+
+#empty data frame list
+df = []
 
 #extract values from points
 feat = pts_ly.GetNextFeature()
 while feat:
-    print(feat.GetField('Id'))
-    #reproject feature
-    ds = gpd.read_file(file_path)
-    ds_lambert = ds.to_crs({'init': 'EPSG:4326'})
-    ds_lambert.to_file(wd + outfile_name)
-    driver = ogr.GetDriverByName('ESRI Shapefile')
-    ds_pr = driver.Open(wd + outfile_name, 0)
-    #contained in PrivateLands
-        #loop through prl
-    for section in prl:
-        #print object id
-        prl_id = prl.GetField('OBJECTID')
-        print(prl_id)
-        #get extent of prl
-        geom = prl.GetGeometryRef()
-        prl_ext = geom.GetEnvelope()
-        #check if point within borders of PA (not extent)
-        #pts_ly = ogr.Geometry(ogr.wkbPoint)
-        if geom.Contains(pts_ly):
-            print('1')
-        else:
-            print('0')
+    feat_id = feat.GetField('Id')
+    print(feat_id)
 
-    #contained in Old_Growth
-    #extract Elevation
-    #extract DistToRoad
+    coord = feat.GetGeometryRef()
 
+    # PrivateLands
+    coord_cl = coord.Clone()
+    coord_cl.Transform(coordTrans_prl)  # apply coordinate transformation
+    prl_ly.SetSpatialFilter(coord_cl)
+    count = prl_ly.GetFeatureCount()
+    if count > 0:
+        value_prl = 1
+    else:
+        value_prl = 0
 
+    #OldGrowth
+    coord_cl = coord.Clone()
+    coord_cl.Transform(coordTrans_og)  # apply coordinate transformation
+    og_ly.SetSpatialFilter(coord_cl)
+    count = og_ly.GetFeatureCount()
+    if count > 0:
+        value_og = 1
+    else:
+        value_og = 0
+
+    # Elevation
+    coord_cl = coord.Clone()
+    coord_cl.Transform(coordTrans_el)  # apply coordinate transformation
+    gt_el = el.GetGeoTransform()  # get projection and transformation to calculate absolute raster coordinates
+    x, y = coord_cl.GetX(), coord_cl.GetY()
+    px_el = int((x - gt_el[0]) / gt_el[1])
+    py_el = int((y - gt_el[3]) / gt_el[5])
+    rb_el = el.GetRasterBand(1)
+    print(rb_el.DataType)
+    struc_var_el = rb_el.ReadRaster(px_el, py_el, 1, 1)
+    print(struc_var_el)
+    val_el = struct.unpack('H', struc_var_el)
+    value_el = val_el[0]
+
+    # DistToRoad
+    coord_cl = coord.Clone()
+    coord_cl.Transform(coordTrans_dist)  # apply coordinate transformation
+    gt_dist = dist.GetGeoTransform()  # get projection and transformation to calculate absolute raster coordinates
+    x, y = coord_cl.GetX(), coord_cl.GetY()
+    px_dist = int((x - gt_dist[0]) / gt_dist[1])
+    py_dist = int((y - gt_dist[3]) / gt_dist[5])
+    rb_dist = dist.GetRasterBand(1)
+    print(rb_dist.DataType)
+    struc_var_dist = rb_dist.ReadRaster(px_dist, py_dist, 1, 1)
+    print(struc_var_dist)
+    val_dist = struct.unpack('f', struc_var_dist)
+    value_dist = val_dist[0]
+
+    #copy results into the df list
+    df.append([feat_id,value_prl,value_og,value_el,value_dist])
+
+    #go to next feature
     feat = pts_ly.GetNextFeature()
 pts_ly.ResetReading()
 
-####
-'''
-src_filename = wd + 'DistToRoad.tif'
-shp_filename = wd + 'Points_pr.shp'
+#prepare table
+col_names = ['Point ID','Private','OldGrowth','Elevation', 'Road_Dist'] #assign 'column' names to values
+df = pd.DataFrame.from_records(df,columns = col_names)  #combines the col_names with its values
+df = pd.melt(df, id_vars = ['Point ID'], value_vars=['Private','OldGrowth','Elevation', 'Road_Dist']) #change table orientation, column become rows
+df = df.sort_values(by ='Point ID') #sort by Point ID
+print(df)
 
-src_ds=gdal.Open(src_filename)
-gt=src_ds.GetGeoTransform()
-rb=src_ds.GetRasterBand(1)
+#write csv to disc
+df.to_csv(path_or_buf = 'output.csv', index = False)
 
-ds=ogr.Open(shp_filename)
-lyr=ds.GetLayer()
-for feat in lyr:
-    geom = feat.GetGeometryRef()
-    mx,my=geom.GetX(), geom.GetY()  #coord in map units
-
-    #Convert from map to pixel coordinates.
-    #Only works for geotransforms with no rotation.
-    px = int((mx - gt[0]) / gt[1]) #x pixel
-    py = int((my - gt[3]) / gt[5]) #y pixel
-
-    structval=rb.ReadRaster(px,py,1,1,buf_type=gdal.GDT_UInt16) #Assumes 16 bit int aka 'short'
-    intval = struct.unpack('h' , structval) #use the 'short' format code (2 bytes) not int (4 bytes)
-
-    print (intval[0]) #intval is a tuple, length=1 as we only asked for 1 pixel value
-'''
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
 
 print("")
@@ -118,13 +146,3 @@ print("--------------------------------------------------------")
 print("start: " + starttime)
 print("end: " + endtime)
 print("")
-
-'''#reproject shapefiles to Lambert
-pts_l = reprojectSHP2Lambert(pts, 'Points_lam.shp')
-og_l  = reprojectSHP2Lambert(og, 'Old_Growth_lam.shp')
-prl_l = reprojectSHP2Lambert(prl, 'PrivateLands_lam.shp')
-
-#reproject shapefiles to WGS84
-pts_w = reprojectSHP2Lambert(pts, 'Points_wgs.shp')
-og_w  = reprojectSHP2Lambert(og, 'Old_Growth_wgs.shp')
-prl_w = reprojectSHP2Lambert(prl, 'PrivateLands_wgs.shp')'''
