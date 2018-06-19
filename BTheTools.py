@@ -497,6 +497,27 @@ def reprojectSHP2WGS84(file_path, outfile_name):#tb tested
     ds_pr = ds_pr.GetLayer()
     return ds_pr
 
+def TransformGeometry(geometry, target_sref):
+    #Returns cloned geometry, which is transformed to target spatial reference
+    geom_sref= geometry.GetSpatialReference()
+    transform = osr.CoordinateTransformation(geom_sref, target_sref)
+    geom_trans = geometry.Clone()
+    geom_trans.Transform(transform)
+    return geom_trans
+
+def SpatialReferenceFromRaster(ds):
+    #Returns SpatialReference from raster dataset
+    pr = ds.GetProjection()
+    sr = osr.SpatialReference()
+    sr.ImportFromWkt(pr)
+    return sr
+
+def CopySHPDisk(layer, outpath):
+    drvV = ogr.GetDriverByName('ESRI Shapefile')
+    outSHP = drvV.CreateDataSource(outpath) #outpath
+    lyr = layer # .GetLayer() #shape
+    sett90LYR = outSHP.CopyLayer(lyr, 'lyr')
+    del lyr, sett90LYR, outSHP
 # ####################################### unsorted TEMPLATES ########################################################## #
 '''
 mylist=fp_sc_list[0]
