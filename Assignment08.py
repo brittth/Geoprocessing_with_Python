@@ -24,7 +24,7 @@ baseFolder = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/Week
 # ####################################### FUNCTIONS ########################################################## #
 
 def TransformGeometry(geometry, target_sref):
-    '''Returns cloned geometry, which is transformed to target spatial reference'''
+    #Returns cloned geometry, which is transformed to target spatial reference
     geom_sref= geometry.GetSpatialReference()
     transform = osr.CoordinateTransformation(geom_sref, target_sref)
     geom_trans = geometry.Clone()
@@ -32,7 +32,7 @@ def TransformGeometry(geometry, target_sref):
     return geom_trans
 
 def SpatialReferenceFromRaster(ds):
-    '''Returns SpatialReference from raster dataset'''
+    #Returns SpatialReference from raster dataset
     pr = ds.GetProjection()
     sr = osr.SpatialReference()
     sr.ImportFromWkt(pr)
@@ -49,11 +49,11 @@ def CopySHPDisk(layer, outpath):
 
 parcels = ogr.Open(baseFolder + "Parcels.shp", 1)
 parcels_lyr = parcels.GetLayer()
-parcels_cs = parcels_lyr.GetSpatialRef() #g1
+parcels_cs = parcels_lyr.GetSpatialRef()
 
 # Load data
 # Marihuana
-    # Get Projection infos #g1
+    # Get Projection infos
 mary = ogr.Open(baseFolder + "Marihuana_Grows.shp")
 mary_lyr = mary.GetLayer()
 mary_cs = mary_lyr.GetSpatialRef()
@@ -76,7 +76,7 @@ sr_raster = SpatialReferenceFromRaster(dem)
 parcels_cs = parcels_lyr.GetSpatialRef()
 feat = parcels_lyr.GetNextFeature()
 
-# Create output dataframe #g1
+# Create output dataframe
 out_df = pd.DataFrame(columns=["Parcel APN", "NR_GH-Plants", "NR_OD-Plants", "Dist_to_grow_m", "Km Priv. Road", "Km Local Road", "Mean elevation", "PublicLand_YN", "Prop_in_THP"])
 
 while feat:
@@ -222,8 +222,8 @@ while feat:
     # CopySHPDisk(ds_lyr, "tryout.shp") #If you wish to check the shp
 
     # Create the destination data source
-    x_res =  math.ceil((x_max - x_min) / gt[1])
-    y_res =  math.ceil((y_max - y_min) / gt[1])
+    x_res = math.ceil((x_max - x_min) / gt[1])
+    y_res = math.ceil((y_max - y_min) / gt[1])
     target_ds = gdal.GetDriverByName('MEM').Create('', x_res, y_res, gdal.GDT_Byte)
     target_ds.GetRasterBand(1).SetNoDataValue(-9999)
     target_ds.SetProjection(pr)
@@ -231,7 +231,7 @@ while feat:
 
     # Rasterization
     # to account for small overlaps of polygons in pixels
-    gdal.RasterizeLayer(target_ds, [1], ds_lyr, burn_values=[1], options=['ALL_TOUCHED=TRUE'])
+    gdal.RasterizeLayer(target_ds, [1], ds_lyr, burn_values=[1]) #options=['ALL_TOUCHED=TRUE']) --> this part was defect
     target_array = target_ds.ReadAsArray()
     # target_ds = None
 
@@ -252,12 +252,14 @@ while feat:
     ##############################
 
     feat = parcels_lyr.GetNextFeature()
-    out_df.loc[len(out_df) + 1] = [apn, total_gh, total_od, distance, length_pr, length_lr, dem_mean, public, thp_prop]  #g1
+    # Prepare table
+    out_df.loc[len(out_df) + 1] = [apn, total_gh, total_od, distance, length_pr, length_lr, dem_mean, public, thp_prop]
 
 parcels_lyr.ResetReading()
 
+# Write table to csv
+out_df.to_csv("Assignment08_output.csv", index=None, sep=',', mode='a')
 
-out_df.to_csv("output_humboldt_county.csv", index=None, sep=',', mode='a') #g1
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
 
 print("")
