@@ -113,37 +113,26 @@ while feat:
     feat_id = feat.GetField('Id')
     print("\n", feat_id)
 
-    #save classes in list
-    pt_class = feat.GetField('Class')
-    pt_list.append(pt_class)
-
     #get reference system
     coord = feat.GetGeometryRef()
     coord_cl = coord.Clone()
     coord_cl.Transform(coordTrans_ol)  # apply coordinate transformation
     x, y = coord_cl.GetX(), coord_cl.GetY()
 
-    #TBC #####################
-    #print("x y ",x,y)
-    #print(overlap)
     print(overlap[0],"      ", x, "      ",overlap[2])
     print(overlap[3],"      ", y,"      ", overlap[1])
     print("       ",overlap[0] <= x <= overlap[2],"                      ", overlap[3] <= y <= overlap[1])
     # only extract values from points where points within overlap
-        # overlap = [UL_x_ext, UL_y_ext, LR_x_ext, LR_y_ext] --> must be wrong
+        # overlap = [UL_x_ext, UL_y_ext, LR_x_ext, LR_y_ext] --> from function, but must be wrong
         # overlap = [UL_x_ext, LR_y_ext, LR_x_ext, UL_y_ext] --> corrected
-        #ATTEMPT 1 --> doesn't work: always outside
-    #print(x <= overlap[2],x >= overlap[0],y <= overlap[3],y >= overlap[1] )
-    #if x <= overlap[0] and y >= overlap[1] and x <= overlap[2] and y <= overlap[3]:
-        # ATTEMPT 2 --> doesn't work: always outside
-    #if overlap[0] <= x <= overlap[2]:
-    #    if overlap[1] <= y <= overlap[3]:
-        # ATTEMPT 3 -->
     if overlap[0] <= x <= overlap[2]:
         if overlap[3] <= y <= overlap[1]:
-    # check for coordinate system (gt is getgeotransforms of overlap) #geotransform = dataset.GetGeoTransform()
 
-        #for each raster file
+            #save classes in list
+            pt_class = feat.GetField('Class')
+            pt_list.append(pt_class)
+
+            #for each raster file
             for raster in file_list:
                 print("raster ",raster)
                 ras = gdal.Open(root_folder + raster)
@@ -166,48 +155,42 @@ while feat:
         else:
             print("Point is located outside of overlap y-range!")
     else:
-        print("Point is located outside of overlap x-range (and maybe y-range)!")
-    # TBC ###################
+        print("Point is located at least outside of overlap x-range!")
+
     #go to next feature
     feat = pts_lyr.GetNextFeature()
 
 pts_lyr.ResetReading()
 
-# extracted training values
+# extracted training values --> trainingDS_features_4_770.npy
 arr_train = np.asarray(df_list)
-print(arr_train.shape) #(1000, 4)
+print("\ntrainingDS_features ",arr_train.shape) #(770,4) --> 770 rows and 4 columns
 
-# classes array
+# classes array --> trainingDS_labels_1_770.npy
 arr_train_cl = np.asarray(pt_list)
-print(arr_train_cl.shape) #(1000,)
+print("trainingDS_labels ", arr_train_cl.shape) #(770,) --> 770 rows and 1 column
 
 # Build an empty array with the expected dimensions --> very effective!
     #tuple(m,n)   m = nrows = y_dim = .shape[0]   n = ncols = x_dim = .shape[1]
-#x_dim = array_list[0].shape[0] #first attempt
-#y_dim = array_list[0].shape[1] #first attempt
 x_dim = array_list[0].shape[1]
 y_dim = array_list[0].shape[0]
 out_array = np.zeros((x_dim * y_dim, 4), dtype=np.int8)
 
-# Apply simple array slicing
+# Apply simple array slicing --> classificationDS_features_1752_1694.npy
 for i in range(len(array_list)):
     out_array[:,i] = array_list[i].ravel() # ravel() reduces the dimensions of an array
-print(out_array.shape)
+print("classificationDS_features ",out_array.shape) #(2967888, 4) --> 2967888 rows and 4 columns
 
 # Save the numpy arrays to disc
 outName = "classificationDS_features_"+str(x_dim)+"_"+str(y_dim)+".npy"
 np.save(outName, out_array)
 
-#x_dim = arr_train.shape[0] #first attempt
-#y_dim = arr_train.shape[1] #first attempt
 x_dim = arr_train.shape[1]
 y_dim = arr_train.shape[0]
 outName = "trainingDS_features_"+str(x_dim)+"_"+str(y_dim)+".npy"
 np.save(outName, arr_train)
 
-#x_dim = arr_train_cl.shape[0] #first attempt
-#y_dim = 1 #first attempt
-x_dim = 1
+x_dim = 1 #arr_train_cl.shape[1] --> error
 y_dim = arr_train_cl.shape[0]
 outName = "trainingDS_labels_"+str(x_dim)+"_"+str(y_dim)+".npy"
 np.save(outName, arr_train_cl)
