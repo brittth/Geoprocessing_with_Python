@@ -1,10 +1,7 @@
 # ####################################### LOAD REQUIRED LIBRARIES ############################################# #
 
 import time
-import os
-from osgeo import ogr
 from osgeo import gdal, ogr, osr
-import pandas as pd
 import numpy as np
 import struct
 
@@ -62,7 +59,7 @@ def RasterOverlapToArray(file_list):
         print("UL x offset: ", x1off)
         print("UL y offset: ", y1off,"\n")
         array_list.append(ds.ReadAsArray(x1off, y1off, extent_x, extent_y)) #Upper Left corner
-    return gt,overlap,array_list
+    return overlap,array_list
     #return array_list
 
 # ####################################### FOLDER PATHS & global variables ##################################### #
@@ -81,7 +78,7 @@ pts = "RandomPoints.shp"
 file_list = [im1,im2,im3,im4]
 
 #get raster overlap as array
-gt,overlap,array_list = RasterOverlapToArray(file_list)
+overlap,array_list = RasterOverlapToArray(file_list)
 #array_list = RasterOverlapToArray(file_list)
 print(array_list)
 
@@ -100,11 +97,11 @@ pts_lyr = pts.GetLayer()
 
 #get raster information for coordinate transformation
 source_SR = pts_lyr.GetSpatialRef()     # get spatial reference from sample layer
-ol = gdal.Open(root_folder + im1)       # open any raster (they all have the same projection
+ol = gdal.Open(root_folder + im1)       # open any raster (they all have the same projection)
 pr_ol = ol.GetProjection()              # get projection from raster
 target_SR_ol = osr.SpatialReference()   # create empty spatial reference
 target_SR_ol.ImportFromWkt(pr_ol)       # get spatial reference from projection of raster
-coordTrans_ol = osr.CoordinateTransformation(source_SR, target_SR_ol)     # transformation rule for coordinates from samples to elevation raster
+coordTrans_ol = osr.CoordinateTransformation(source_SR, target_SR_ol)     # transformation rule for coordinates from samples to raster
 
 #extract values from points
 df_list = []
@@ -127,43 +124,58 @@ while feat:
     x, y = coord_cl.GetX(), coord_cl.GetY()
 
     #TBC #####################
-    print("x y ",x,y)
-    print(overlap)
-    print(x <= overlap[2],x >= overlap[0],y <= overlap[3],y >= overlap[1] )
+    #print("x y ",x,y)
+    #print(overlap)
+    print(overlap[0],"      ", x, "      ",overlap[2])
+    print(overlap[3],"      ", y,"      ", overlap[1])
+    print("       ",overlap[0] <= x <= overlap[2],"                      ", overlap[3] <= y <= overlap[1])
     # only extract values from points where points within overlap
-    if x <= overlap[2] and x >= overlap[0] and y <= overlap[3] and y >= overlap[1]: #[UL_x_ext, UL_y_ext, LR_x_ext, LR_y_ext] #error: always outside
-
-    #check for coordinate system (gt is getgeotransforms of overlap)
+        # overlap = [UL_x_ext, UL_y_ext, LR_x_ext, LR_y_ext] --> must be wrong
+        # overlap = [UL_x_ext, LR_y_ext, LR_x_ext, UL_y_ext] --> corrected
+        #ATTEMPT 1 --> doesn't work: always outside
+    #print(x <= overlap[2],x >= overlap[0],y <= overlap[3],y >= overlap[1] )
+    #if x <= overlap[0] and y >= overlap[1] and x <= overlap[2] and y <= overlap[3]:
+        # ATTEMPT 2 --> doesn't work: always outside
+    #if overlap[0] <= x <= overlap[2]:
+    #    if overlap[1] <= y <= overlap[3]:
+        # ATTEMPT 3 -->
+    if overlap[0] <= x <= overlap[2]:
+        if overlap[3] <= y <= overlap[1]:
+    # check for coordinate system (gt is getgeotransforms of overlap) #geotransform = dataset.GetGeoTransform()
 
         #for each raster file
-        for raster in file_list:
+            for raster in file_list:
+                print("raster ",raster)
+                ras = gdal.Open(root_folder + raster)
+                gt_ol = ras.GetGeoTransform()  # get projection and transformation to calculate absolute raster coordinates
+                px_ol = int((x - gt_ol[0]) / gt_ol[1])
+                py_ol = int((y - gt_ol[3]) / gt_ol[5])
+                rb_ol = ras.GetRasterBand(1)
+                struc_var_ol = rb_ol.ReadRaster(px_ol, py_ol, 1, 1)
+                if struc_var_ol is None:
+                    value_ol = struc_var_ol
+                else:
+                    val_ol = struct.unpack('H', struc_var_ol)
+                    value_ol = val_ol[0]
 
-            print("raster ",raster)
-            ras = gdal.Open(root_folder + raster)
-            gt_ol = ras.GetGeoTransform()  # get projection and transformation to calculate absolute raster coordinates
-            px_ol = int((x - gt_ol[0]) / gt_ol[1])
-            py_ol = int((y - gt_ol[3]) / gt_ol[5])
-            rb_ol = ras.GetRasterBand(1)
-            struc_var_ol = rb_ol.ReadRaster(px_ol, py_ol, 1, 1)
-            if struc_var_ol is None:
-                value_ol = struc_var_ol
-            else:
-                val_ol = struct.unpack('H', struc_var_ol)
-                value_ol = val_ol[0]
+                #save results for each raster in list
+                df_list_inner.append(value_ol)
 
-            #save results for each raster in list
-            df_list_inner.append(value_ol)
-
-        # save results for each point in list
-        df_list.append(df_list_inner)
+            # save results for each point in list
+            df_list.append(df_list_inner)
+        else:
+            print("Point is located outside of overlap y-range!")
     else:
-        print("Point is located outside of overlap!")
-
+        print("Point is located outside of overlap x-range (and maybe y-range)!")
     # TBC ###################
     #go to next feature
-        feat = pts_lyr.GetNextFeature()
+    feat = pts_lyr.GetNextFeature()
 
 pts_lyr.ResetReading()
+# calculate elevation and slope statistics while excluding/masking NoData values: mean, min, max
+        #arr_dem_m = ma.masked_where(arr_dem >= 8000, arr_dem)
+        #arr_slo_m = ma.masked_where(arr_slo < 0, arr_slo)
+        #arr_thp_m = ma.masked_where(arr_thp > 10000, arr_thp)
 
 # extracted training values
 arr_train = np.asarray(df_list)
@@ -173,10 +185,12 @@ print(arr_train.shape) #(1000, 4)
 arr_train_cl = np.asarray(pt_list)
 print(arr_train_cl.shape) #(1000,)
 
-
 # Build an empty array with the expected dimensions --> very effective!
-x_dim = array_list[0].shape[0]
-y_dim = array_list[0].shape[1]
+    #tuple(m,n)   m = nrows = y_dim = .shape[0]   n = ncols = x_dim = .shape[1]
+#x_dim = array_list[0].shape[0] #first attempt
+#y_dim = array_list[0].shape[1] #first attempt
+x_dim = array_list[0].shape[1]
+y_dim = array_list[0].shape[0]
 out_array = np.zeros((x_dim * y_dim, 4), dtype=np.int8)
 
 # Apply simple array slicing
@@ -188,17 +202,19 @@ print(out_array.shape)
 outName = "classificationDS_features_"+str(x_dim)+"_"+str(y_dim)+".npy"
 np.save(outName, out_array)
 
-x_dim = arr_train.shape[0]
-y_dim = arr_train.shape[1]
+#x_dim = arr_train.shape[0] #first attempt
+#y_dim = arr_train.shape[1] #first attempt
+x_dim = arr_train.shape[1]
+y_dim = arr_train.shape[0]
 outName = "trainingDS_features_"+str(x_dim)+"_"+str(y_dim)+".npy"
 np.save(outName, arr_train)
 
-x_dim = arr_train_cl.shape[0]
-y_dim = 1
+#x_dim = arr_train_cl.shape[0] #first attempt
+#y_dim = 1 #first attempt
+x_dim = 1
+y_dim = arr_train_cl.shape[0]
 outName = "trainingDS_labels_"+str(x_dim)+"_"+str(y_dim)+".npy"
 np.save(outName, arr_train_cl)
-
-print("overlap",overlap,"\nminX ",minX,"\nminY ",minY,"\nmaxX ",maxX,"\nmaxY ",maxY)
 
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
 
