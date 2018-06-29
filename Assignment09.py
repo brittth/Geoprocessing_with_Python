@@ -172,10 +172,6 @@ while feat:
     feat = pts_lyr.GetNextFeature()
 
 pts_lyr.ResetReading()
-# calculate elevation and slope statistics while excluding/masking NoData values: mean, min, max
-        #arr_dem_m = ma.masked_where(arr_dem >= 8000, arr_dem)
-        #arr_slo_m = ma.masked_where(arr_slo < 0, arr_slo)
-        #arr_thp_m = ma.masked_where(arr_thp > 10000, arr_thp)
 
 # extracted training values
 arr_train = np.asarray(df_list)
