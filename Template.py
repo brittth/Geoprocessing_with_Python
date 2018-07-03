@@ -2,7 +2,9 @@
 
 import time
 import os
-import re
+from osgeo import gdal, ogr, osr
+import numpy as np
+import struct
 
 # ####################################### SET TIME-COUNT ###################################################### #
 
