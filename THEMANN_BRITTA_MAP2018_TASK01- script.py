@@ -2,10 +2,11 @@
 
 import time
 import os
-import re
 from osgeo import gdal, ogr, osr
 import numpy as np
+import pandas as pd
 import struct
+import random
 
 # ####################################### SET TIME-COUNT ###################################################### #
 
@@ -99,24 +100,65 @@ LR_x = max(LR_x_list)
 LR_y = min(LR_y_list)
 print("\nCorner coordinates of the area covered by the 4 tiles: \n UL(",UL_x,",",UL_y,") and LR(",LR_x,",",LR_y,")")
 
-#
+# generate random points
+    # random points data frame preparation
+ID = 0
+pnt_df = pd.DataFrame(columns=["ID", "X_COORD", "Y_COORD"])
+
 pnt_list = []
-    while len(pnt_list) < 50: #50, 3 as a test
-        # find range of x coords to draw random number
-        seq_x_min = x_ori + (int((x_min - x_ori) / 30)) * 30
-        seq_x_max = x_ori + (int((x_max - x_ori) / 30)) * 30
-        x_random = random.choice(np.arange(seq_x_min, seq_x_max, 30))  # generate random x coordinate
+while len(pnt_list) < 500:
+    x_random = random.choice(np.arange(UL_x, LR_x, 30)) # generate random x coordinate from range of x values
+    y_random = random.choice(np.arange(LR_y, UL_y, 30)) # generate random y coordinate from range of y values
 
-        # find range of y coords to draw random number
-        seq_y_min = y_ori + (int((y_min - y_ori) / 30)) * 30
-        seq_y_max = y_ori + (int((y_max - y_ori) / 30)) * 30
-        y_random = random.choice(np.arange(seq_y_min, seq_y_max, 30))  # generate random y coordinate
+    pnt = ogr.Geometry(ogr.wkbPoint)  # create point class object
+    pnt.AddPoint(x_random, y_random)  # add point coordinate
 
-        # 4) check if point within borders of PA (not extent) #works
-        pnt = ogr.Geometry(ogr.wkbPoint)  # create point class object
-        pnt.AddPoint(x_random, y_random)  # add point coordinate
-        if geom.Contains(pnt):
+    pnt_list.append(pnt)
+    pnt_df.loc[len(pnt_df) + 1] = [ID, x_random, y_random]
+    ID += 1
+print(pnt_list)
+    # write random point sample to csv file in the rootFolder
+pnt_df.to_csv(rootFolder + "test.csv", index=None, sep=';', mode='a')
 
+    #still need the right coordinate system: 102033
+# 100 points from 0-20% strata?
+# 100 points from 21-40% strata?
+# 100 points from 41-60% strata?
+# 100 points from 61-80% strata?
+# 100 points from 81-100% strata?
+
+
+
+''' TRY TO SAVE AS SHAPEFILE
+# Write point coordinates to Shapefile
+shpDriver = ogr.GetDriverByName("ESRI Shapefile")
+if os.path.exists('points.shp'):
+    shpDriver.DeleteDataSource('points.shp')
+outDataSource = shpDriver.CreateDataSource('points.shp')
+outLayer = outDataSource.CreateLayer('points.shp', geom_type=ogr.wkbMultiPoint)
+featureDefn = outLayer.GetLayerDefn()
+outFeature = ogr.Feature(featureDefn)
+outFeature.SetGeometry(multipoint)
+outLayer.CreateFeature(outFeature)
+outFeature = None
+'''
+
+
+# TEST IF KML WORKS
+'''
+from osgeo import ogr
+ring = ogr.Geometry(ogr.wkbLinearRing)
+ring.AddPoint(1179091.1646903288, 712782.8838459781)
+ring.AddPoint(1161053.0218226474, 667456.2684348812)
+ring.AddPoint(1214704.933941905, 641092.8288590391)
+ring.AddPoint(1228580.428455506, 682719.3123998424)
+ring.AddPoint(1218405.0658121984, 721108.1805541387)
+ring.AddPoint(1179091.1646903288, 712782.8838459781)
+geom_poly = ogr.Geometry(ogr.wkbPolygon)
+geom_poly.AddGeometry(ring)
+kml = geom_poly.ExportToKML()
+print(kml)
+'''
 # create a polygon with these coordinates to generate random points in
     # Create corner points
 #corners = ogr.Geometry(ogr.wkbLinearRing)
@@ -136,16 +178,6 @@ pnt_list = []
 # Get Envelope returns a tuple (minX, maxX, minY, maxY)
 #env = geom.GetEnvelope()
 #print ("minX: %d, minY: %d, maxX: %d, maxY: %d" %(env[0],env[2],env[1],env[3]))
-
-
-# generate random points
-# 100 points from 0-20% strata?
-# 100 points 21-40% strata?
-# 100 points 41-60% strata?
-# 100 points 61-80% strata?
-# 100 points 81-100% strata?
-
-        #envelope around the 4 tiles
 
 
         #while loop to get 100 per condition
