@@ -2,6 +2,7 @@
 
 import time
 import os
+import re
 from osgeo import gdal, ogr, osr
 import numpy as np
 import struct
@@ -15,15 +16,138 @@ print("")
 
 # ####################################### FUNCTIONS ########################################################### #
 
+#GetCoordinates --> get coordinates for multiple tif files
+    # input: list of input files --> file_list
+    # UL --> Upper Left corner
+    # LR --> Lower Right corner
+def GetCoordinates(file_list, root_folder):
+    UL_x_list = []
+    UL_y_list = []
+    LR_x_list = []
+    LR_y_list = []
+    for file in file_list:
+        coord_list = []
+        ds = gdal.Open(root_folder + file, gdal.GA_ReadOnly)
+        gt = ds.GetGeoTransform()  # UL_x, x-coordinate spatial resolution, UL_y, # y-coord. spat.res.
+        # Upper left
+        UL_x, UL_y = gt[0], gt[3]
+        # Lower right
+        LR_x = UL_x + (gt[1] * ds.RasterXSize)
+        LR_y = UL_y + (gt[5] * ds.RasterYSize)
+        UL_x_list.append(UL_x)
+        UL_y_list.append(UL_y)
+        LR_x_list.append(LR_x)
+        LR_y_list.append(LR_y)
+        print("Coordinates of " + file + ": " + "(" + str(UL_x) + "," + str(UL_y) + ") and (" + str(LR_x) + "," + str(LR_y) + ")")
+    return UL_x_list, UL_y_list, LR_x_list, LR_y_list
+
 # ####################################### FOLDER PATHS & GLOBAL VARIABLES ##################################### #
 
+rootFolder = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/MAP/Geoprocessing-in-python_MAP2018_data/Task01_data/"
 
+ras1 = "Tile_x18999_y38999_1000x1000_2014-2015_CHACO"
+ras2 = "Tile_x18999_y38999_1000x1000_2014-2015_CHACO"
+ras3 = "Tile_x18999_y38999_1000x1000_2014-2015_CHACO"
+ras4 = "Tile_x18999_y38999_1000x1000_2014-2015_CHACO"
+L8_doy = rootFolder + "2015_L8_doy015/"
+L8_met = rootFolder + "2015_L8_metrics/"
+S1_met_VH = rootFolder + "2015_S1_metrics/VH_mean/"
+S1_met_VV = rootFolder + "2015_S1_metrics/VV_mean/"
+
+path_VCF = rootFolder + "2000_VCF/20S_070W.tif"
+
+path_L8_doy1 = L8_doy + ras1 + "_PBC_multiYear_Imagery.bsq"
+path_L8_doy2 = L8_doy + ras2 + "_PBC_multiYear_Imagery.bsq"
+path_L8_doy3 = L8_doy + ras3 + "_PBC_multiYear_Imagery.bsq"
+path_L8_doy4 = L8_doy + ras4 + "_PBC_multiYear_Imagery.bsq"
+
+path_L8_metrics1 = L8_met + ras1 + "_PBC_multiYear_Metrics.bsq"
+path_L8_metrics2 = L8_met + ras2 + "_PBC_multiYear_Metrics.bsq"
+path_L8_metrics3 = L8_met + ras3 + "_PBC_multiYear_Metrics.bsq"
+path_L8_metrics4 = L8_met + ras4 + "_PBC_multiYear_Metrics.bsq"
+
+path_S1_metricsVH1 = S1_met_VH + ras1 + ".tif"
+path_S1_metricsVH2 = S1_met_VH + ras2 + ".tif"
+path_S1_metricsVH3 = S1_met_VH + ras3 + ".tif"
+path_S1_metricsVH4 = S1_met_VH + ras4 + ".tif"
+
+path_S1_metricsVV1 = S1_met_VV + ras1 + ".tif"
+path_S1_metricsVV2 = S1_met_VV + ras2 + ".tif"
+path_S1_metricsVV3 = S1_met_VV + ras3 + ".tif"
+path_S1_metricsVV4 = S1_met_VV + ras4 + ".tif"
 
 # ####################################### PROCESSING ########################################################## #
 
 #1) Create random points
     #1.1) Tree cover strata: 100x0-20% , 100x21-40%,... covered by all four tiles = 500 points
+
+# write the file names containing ".bsq" of each tile into a file_list_bsq
+file_list_all = os.listdir(L8_doy)
+print("All files in folder: \n",file_list_all,"\n")
+file_list_bsq = []
+for file in file_list_all:
+    if "bsq" in file:
+        file_list_bsq.append(file)
+print("Only bsq files in folder: \n",file_list_bsq,"\n")
+
+# identify UL and LR corner coordinates of the area covered by the 4 tiles
+print("Extracting corner coordinates of the 4 tiles:")
+UL_x_list, UL_y_list, LR_x_list, LR_y_list = GetCoordinates(file_list_bsq,L8_doy)
+UL_x = min(UL_x_list)
+UL_y = max(UL_y_list)
+LR_x = max(LR_x_list)
+LR_y = min(LR_y_list)
+print("\nCorner coordinates of the area covered by the 4 tiles: \n UL(",UL_x,",",UL_y,") and LR(",LR_x,",",LR_y,")")
+
+#
+pnt_list = []
+    while len(pnt_list) < 50: #50, 3 as a test
+        # find range of x coords to draw random number
+        seq_x_min = x_ori + (int((x_min - x_ori) / 30)) * 30
+        seq_x_max = x_ori + (int((x_max - x_ori) / 30)) * 30
+        x_random = random.choice(np.arange(seq_x_min, seq_x_max, 30))  # generate random x coordinate
+
+        # find range of y coords to draw random number
+        seq_y_min = y_ori + (int((y_min - y_ori) / 30)) * 30
+        seq_y_max = y_ori + (int((y_max - y_ori) / 30)) * 30
+        y_random = random.choice(np.arange(seq_y_min, seq_y_max, 30))  # generate random y coordinate
+
+        # 4) check if point within borders of PA (not extent) #works
+        pnt = ogr.Geometry(ogr.wkbPoint)  # create point class object
+        pnt.AddPoint(x_random, y_random)  # add point coordinate
+        if geom.Contains(pnt):
+
+# create a polygon with these coordinates to generate random points in
+    # Create corner points
+#corners = ogr.Geometry(ogr.wkbLinearRing)
+#corners.AddPoint(UL_x, UL_y) #UL
+#corners.AddPoint(LR_x, UL_y) #UR
+#corners.AddPoint(UL_x, LR_y) #LL
+#corners.AddPoint(LR_x, LR_y) #LR
+    # Create polygon from corner points
+#geom = ogr.Geometry(ogr.wkbPolygon)
+#geom.AddGeometry(corners)
+#kml = geom.ExportToKML() #error wrong lat/lon unit
+#print (kml)
+
+# ALTERNATIVE, but don't know to save to check it
+#wkt = "LINESTRING ("+str(UL_x)+" "+str(UL_y)+", "+str(LR_x)+" "+str(UL_y)+", "+str(UL_x)+" "+str(LR_y)+", "+str(LR_x)+" "+str(LR_y)+")"
+#geom = ogr.CreateGeometryFromWkt(wkt)
+# Get Envelope returns a tuple (minX, maxX, minY, maxY)
+#env = geom.GetEnvelope()
+#print ("minX: %d, minY: %d, maxX: %d, maxY: %d" %(env[0],env[2],env[1],env[3]))
+
+
+# generate random points
+# 100 points from 0-20% strata?
+# 100 points 21-40% strata?
+# 100 points 41-60% strata?
+# 100 points 61-80% strata?
+# 100 points 81-100% strata?
+
         #envelope around the 4 tiles
+
+
         #while loop to get 100 per condition
         #condition is percentage tree cover according to VCF
     #1.2) Add ID-Field
