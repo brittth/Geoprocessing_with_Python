@@ -100,27 +100,69 @@ LR_x = max(LR_x_list)
 LR_y = min(LR_y_list)
 print("\nCorner coordinates of the area covered by the 4 tiles: \n UL(",UL_x,",",UL_y,") and LR(",LR_x,",",LR_y,")")
 
+# read VFC raster
+vfc = gdal.Open(path_VCF)
+# get projection from raster
+vfc_pr = vfc.GetProjection()
+target_SR = osr.SpatialReference()         # create empty spatial reference
+target_SR.ImportFromWkt(vfc_pr)             # get spatial reference from projection of raster
+print(target_SR) #wgs84
+
 # generate random points
     # random points data frame preparation
 ID = 0
 pnt_df = pd.DataFrame(columns=["ID", "X_COORD", "Y_COORD"])
 
 pnt_list = []
+c0020 = [] #0-20% stratum
+c2140 = [] #21-40% stratum
+c4160 = [] #41-60% stratum
+c6180 = [] #61-80% stratum
+c80100 = [] #81-100% stratum
 while len(pnt_list) < 500:
+#while len(c0020)<100:
     x_random = random.choice(np.arange(UL_x, LR_x, 30)) # generate random x coordinate from range of x values
     y_random = random.choice(np.arange(LR_y, UL_y, 30)) # generate random y coordinate from range of y values
-
     pnt = ogr.Geometry(ogr.wkbPoint)  # create point class object
     pnt.AddPoint(x_random, y_random)  # add point coordinate
+    #still need the right coordinate system: 102033
+
+    #source_SR = pnt.SetSpatialRef()         # get spatial reference from sample layer
+    #print(source_SR)#error
+    #coordTrans = osr.CoordinateTransformation(source_SR, target_SR)     # transformation rule for coordinates from samples to raster
+    #coord = pnt.GetGeometryRef()
+    #coord_cl = coord.Clone()
+    #coord_cl.Transform(coordTrans)  # apply coordinate transformation
+
+    #pnt.crs = {'init' :'epsg:102033'}
+
+    #create projection
+    #spatialRef = osr.SpatialReference()
+    #spatialRef.ImportFromEPSG(102033)  # from EPSG
+
+    #source = osr.SpatialReference()
+    #source.ImportFromEPSG(4326)
+    #target = osr.SpatialReference()
+    #target.ImportFromEPSG(102033)
+    #transform = osr.CoordinateTransformation(source, target)
+    #pnt.Transform(transform)
+    #print (pnt.ExportToWkt())
+
+
+
+
+
+    #extract value from point
 
     pnt_list.append(pnt)
     pnt_df.loc[len(pnt_df) + 1] = [ID, x_random, y_random]
     ID += 1
 print(pnt_list)
-    # write random point sample to csv file in the rootFolder
+    # write random point sample to csv file in the rootFolder to check on the points
 pnt_df.to_csv(rootFolder + "test.csv", index=None, sep=';', mode='a')
 
-    #still need the right coordinate system: 102033
+
+
 # 100 points from 0-20% strata?
 # 100 points from 21-40% strata?
 # 100 points from 41-60% strata?
