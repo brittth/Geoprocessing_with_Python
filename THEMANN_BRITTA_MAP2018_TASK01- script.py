@@ -106,7 +106,7 @@ vfc = gdal.Open(path_VCF)
 vfc_pr = vfc.GetProjection()
 target_SR = osr.SpatialReference()         # create empty spatial reference
 target_SR.ImportFromWkt(vfc_pr)            # get spatial reference from projection of raster
-print("\nSpatial Reference of the VFC raster file: \n",target_SR) #wgs84
+print("\nSpatial Reference of the VFC raster file: \n",target_SR)
 
 # generate random points
     # random points data frame preparation
@@ -119,7 +119,7 @@ c2140 = [] #21-40% stratum
 c4160 = [] #41-60% stratum
 c6180 = [] #61-80% stratum
 c80100 = [] #81-100% stratum
-while len(pnt_list) < 500:
+while len(pnt_list) < 100:
 #while len(c0020)<100:
     x_random = random.choice(np.arange(UL_x, LR_x, 30)) # generate random x coordinate from range of x values
     y_random = random.choice(np.arange(LR_y, UL_y, 30)) # generate random y coordinate from range of y values
@@ -128,13 +128,83 @@ while len(pnt_list) < 500:
     pnt = ogr.Geometry(ogr.wkbPoint)  # create point class object
     pnt.AddPoint(x_random, y_random)  # add point coordinate
 
+    # assign spatial reference system from VFC raster
+    pnt.AssignSpatialReference(target_SR)
+    print("\nSpatial Reference of point feature 'pnt': \n",pnt.GetSpatialReference())
+        #still doesn't work in qgis, maybe it has to do with csv, try make shp file
+
+    # Save extent to a new Shapefile
+    outShapefile = "test.shp"
+    outDriver = ogr.GetDriverByName("ESRI Shapefile")
+
+    # Remove output shapefile if it already exists
+    if os.path.exists(outShapefile):
+        outDriver.DeleteDataSource(outShapefile)
+
+    # Create the output shapefile
+    outDataSource = outDriver.CreateDataSource(outShapefile)
+    outLayer = outDataSource.CreateLayer("test_bla", geom_type=ogr.wkbPoint)
+
+    # Add an ID field
+    idField = ogr.FieldDefn("id", ogr.OFTInteger)
+    outLayer.CreateField(idField)
+
+    # Create the feature and set values
+    featureDefn = outLayer.GetLayerDefn()
+    feature = ogr.Feature(featureDefn)
+    feature.SetGeometry(pnt)
+    feature.SetField("id", 1)
+    outLayer.CreateFeature(feature)
+
+    # Close DataSource
+    outDataSource.Destroy()
+'''
+    # .SHP
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    # create a shapefile for polygons
+    shapefile = driver.CreateDataSource(rootFolder+'test.shp')
+    # set spatial reference
+    #spatialreference = ogr.osr.SpatialReference()
+    #spatialreference.ImportFromEPSG(3035)
+    #create the layer
+    layer = shapefile.CreateLayer('test', target_SR, ogr.wkbPoint)
+    layerDefinition = layer.GetLayerDefn()
+
+    # add attributes to layer
+    #point_ID = ogr.FieldDefn('point_ID', ogr.OFTInteger)
+    #polygon_ID = ogr.FieldDefn('polygon_ID', ogr.OFTInteger)
+    #PA_name = ogr.FieldDefn('PA_name', ogr.OFTString)
+    #layer.CreateField(point_ID)
+    #layer.CreateField(polygon_ID)
+    #layer.CreateField(PA_name)
+
+    # create SHP
+    feature = ogr.Feature(layerDefinition) # create a feature
+    feature.SetGeometry(pnt) # put geometry into feature
+    feature.SetField("UID", str(ID)) # add attributes       #error
+    layer.CreateFeature(feature) # put feature in layer
+'''
+    # append to point list
+    pnt_list.append(pnt)
+
+    # prepare data to write to disc as csv
+    #pnt_df.loc[len(pnt_df) + 1] = [ID, x_random, y_random]
+    ID += 1
+
+print(pnt_list)
+    # write random point sample to csv file in the rootFolder to check on the points
+#pnt_df.to_csv(rootFolder + "test.csv", index=None, sep=';', mode='a')
+
+
     #PROJECTION PROBLEM ATTEMPTS - start
     #still need the right coordinate system: 102033 acc. qgis
 
     #creating a blank spatial reference and filling it
-    sr = osr.SpatialReference()
-    sr.ImportFromEPSG(102033)
-    print(sr.GetAttrValue('PROJCS'))
+    #sr = osr.SpatialReference()
+    #sr.ImportFromEPSG(102033)
+    #sr.ImportFromWkt(vfc_pr) #error
+    #print(sr.GetAttrValue('PROJCS'))
+    #print("\nSpatial Reference stored under 102033: \n",pnt.GetSpatialReference())
 
     # Get projection from Geometry
     #feature = layer.GetNextFeature()
@@ -161,15 +231,8 @@ while len(pnt_list) < 500:
 
     #PROJECTION PROBLEM ATTEMPTS - end
 
+
     #extract value from point
-
-    pnt_list.append(pnt)
-    pnt_df.loc[len(pnt_df) + 1] = [ID, x_random, y_random]
-    ID += 1
-print(pnt_list)
-    # write random point sample to csv file in the rootFolder to check on the points
-pnt_df.to_csv(rootFolder + "test.csv", index=None, sep=';', mode='a')
-
 
 
 # 100 points from 0-20% strata?
