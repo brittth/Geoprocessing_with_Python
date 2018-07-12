@@ -105,8 +105,8 @@ vfc = gdal.Open(path_VCF)
 # get projection from raster
 vfc_pr = vfc.GetProjection()
 target_SR = osr.SpatialReference()         # create empty spatial reference
-target_SR.ImportFromWkt(vfc_pr)             # get spatial reference from projection of raster
-print(target_SR) #wgs84
+target_SR.ImportFromWkt(vfc_pr)            # get spatial reference from projection of raster
+print("\nSpatial Reference of the VFC raster file: \n",target_SR) #wgs84
 
 # generate random points
     # random points data frame preparation
@@ -123,22 +123,33 @@ while len(pnt_list) < 500:
 #while len(c0020)<100:
     x_random = random.choice(np.arange(UL_x, LR_x, 30)) # generate random x coordinate from range of x values
     y_random = random.choice(np.arange(LR_y, UL_y, 30)) # generate random y coordinate from range of y values
+
+    # create a geometry from coordinates
     pnt = ogr.Geometry(ogr.wkbPoint)  # create point class object
     pnt.AddPoint(x_random, y_random)  # add point coordinate
-    #still need the right coordinate system: 102033
 
-    #source_SR = pnt.SetSpatialRef()         # get spatial reference from sample layer
+    #PROJECTION PROBLEM ATTEMPTS - start
+    #still need the right coordinate system: 102033 acc. qgis
+
+    #creating a blank spatial reference and filling it
+    sr = osr.SpatialReference()
+    sr.ImportFromEPSG(102033)
+    print(sr.GetAttrValue('PROJCS'))
+
+    # Get projection from Geometry
+    #feature = layer.GetNextFeature()
+    #geom = feature.GetGeometryRef()
+    #spatialRef = geom.GetSpatialReference()
+
+    #source_SR = pnt.GetSpatialRef()         # get spatial reference from sample layer
     #print(source_SR)#error
     #coordTrans = osr.CoordinateTransformation(source_SR, target_SR)     # transformation rule for coordinates from samples to raster
     #coord = pnt.GetGeometryRef()
     #coord_cl = coord.Clone()
     #coord_cl.Transform(coordTrans)  # apply coordinate transformation
 
-    #pnt.crs = {'init' :'epsg:102033'}
-
-    #create projection
-    #spatialRef = osr.SpatialReference()
-    #spatialRef.ImportFromEPSG(102033)  # from EPSG
+    #pnt.to_crs({'init': 'EPSG:102033'})
+    #pnt.to_crs(target_SR)
 
     #source = osr.SpatialReference()
     #source.ImportFromEPSG(4326)
@@ -148,9 +159,7 @@ while len(pnt_list) < 500:
     #pnt.Transform(transform)
     #print (pnt.ExportToWkt())
 
-
-
-
+    #PROJECTION PROBLEM ATTEMPTS - end
 
     #extract value from point
 
