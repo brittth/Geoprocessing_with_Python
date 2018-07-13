@@ -5,6 +5,8 @@ import os
 from osgeo import gdal, ogr, osr
 import numpy as np
 import pandas as pd
+import geopandas as gpd
+from shapely.geometry import Point
 import struct
 import random
 
@@ -109,29 +111,88 @@ target_SR.ImportFromWkt(vfc_pr)            # get spatial reference from projecti
 print("\nSpatial Reference of the VFC raster file: \n",target_SR)
 
 # generate random points
-    # random points data frame preparation
-ID = 0
-pnt_df = pd.DataFrame(columns=["ID", "X_COORD", "Y_COORD"])
 
-pnt_list = []
-c0020 = [] #0-20% stratum
-c2140 = [] #21-40% stratum
-c4160 = [] #41-60% stratum
-c6180 = [] #61-80% stratum
-c80100 = [] #81-100% stratum
-while len(pnt_list) < 100:
-#while len(c0020)<100:
+# random points data frame preparation
+ID = 0
+pnt_df = pd.DataFrame(columns=["UID", "X_COORD", "Y_COORD", "VCF"])
+
+pnt_list = [] # create list to store point information in
+pnts = ogr.Geometry(ogr.wkbMultiPoint)  # create point class object MultiPoint
+
+while len(pnt_list) < 5:
     x_random = random.choice(np.arange(UL_x, LR_x, 30)) # generate random x coordinate from range of x values
     y_random = random.choice(np.arange(LR_y, UL_y, 30)) # generate random y coordinate from range of y values
 
     # create a geometry from coordinates
-    pnt = ogr.Geometry(ogr.wkbPoint)  # create point class object
+    pnt = ogr.Geometry(ogr.wkbPoint)  # create point class object Point
     pnt.AddPoint(x_random, y_random)  # add point coordinate
 
-    # assign spatial reference system from VFC raster
+    # assign spatial reference system from VFC raster to Point geometry
     pnt.AssignSpatialReference(target_SR)
-    print("\nSpatial Reference of point feature 'pnt': \n",pnt.GetSpatialReference())
-        #still doesn't work in qgis, maybe it has to do with csv, try make shp file
+    print("\nSpatial Reference of point feature with ID ",ID,": \n", pnt.GetSpatialReference())
+
+    # add Point geometry to MultiPoint geometry
+    pnts.AddGeometry(pnt)
+
+    # append to point list
+    pnt_list.append(pnt)
+
+    # prepare data to write to disc as csv
+    pnt_df.loc[len(pnt_df) + 1] = [ID, x_random, y_random, "ToBeFilled"]
+    ID += 1
+
+
+print("\nPoint list: \n",pnt_list)
+
+# export MultiPoint geometry to WKT (Well Known Text)
+pnts_wkt = pnts.ExportToWkt()
+print("\nMultiPoint WKT: \n",pnts_wkt)
+
+# count Points geometries in Multipoint geometry
+print("\nGeometry has %i geometries" % (pnts.GetGeometryCount()))
+
+# create Shapefile from Pandas dataframe
+print("\nMultiPoint Dataframe : \n",pnt_df)
+pnt_df['geometry'] = pnt_df.apply(lambda x: Point((float(x.X_COORD), float(x.Y_COORD))), axis=1) # combine lat and lon column to a shapely Point() object (w/ geometry column)
+shp_df = gpd.GeoDataFrame(pnt_df, geometry='geometry') # create new dataframe for shapefile with designated geometry column
+#shp_df.crs = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs" # add projection to dataframe
+shp_df.to_file('MyGeometries.shp', driver='ESRI Shapefile') # write dataframe to shapefile
+
+'''
+# create shapefile from MultiPoint geometry
+polygon = pnts
+driver = ogr.GetDriverByName('ESRI Shapefile')
+shapefile = driver.CreateDataSource(rootFolder + 'test.shp')
+# set spatial reference
+spatialreference = target_SR #ogr.osr.SpatialReference()
+#spatialreference.ImportFromEPSG(3035)
+#create the layer
+layer = shapefile.CreateLayer('pnts', spatialreference, ogr.wkbMultiPoint)
+layerDefinition = layer.GetLayerDefn()
+# add attributes to layer
+idField = ogr.FieldDefn('UID', ogr.OFTInteger)
+xField = ogr.FieldDefn('X_COORD', ogr.OFTReal)
+yField = ogr.FieldDefn('Y_COORD', ogr.OFTReal)
+vcfField = ogr.FieldDefn('VCF', ogr.OFTInteger)
+layer.CreateField(ID)
+layer.CreateField(polygon_ID)
+layer.CreateField(PA_name)
+
+# create SHP
+feature = ogr.Feature(layerDefinition) # greate a feature
+feature.SetGeometry(polygon) # put geometry into feature
+feature.SetField("point_ID", str(n)) # add attributes
+feature.SetField("polygon_ID", str((n*10)+m)) # add attributes
+feature.SetField("PA_name", pnt_df.iloc[n][1]) # add attributes
+layer.CreateFeature(feature) # put feature in layer
+'''
+    # write random point sample to csv file in the rootFolder to check on the points
+#pnt_df.to_csv(rootFolder + "test.csv", index=None, sep=';', mode='a')
+
+
+
+'''
+# still doesn't work in qgis, maybe it has to do with csv, try make shp file
 
     # Save extent to a new Shapefile
     outShapefile = "test.shp"
@@ -159,6 +220,7 @@ while len(pnt_list) < 100:
     # Close DataSource
     outDataSource.Destroy()
 '''
+'''
     # .SHP
     driver = ogr.GetDriverByName('ESRI Shapefile')
     # create a shapefile for polygons
@@ -184,16 +246,7 @@ while len(pnt_list) < 100:
     feature.SetField("UID", str(ID)) # add attributes       #error
     layer.CreateFeature(feature) # put feature in layer
 '''
-    # append to point list
-    pnt_list.append(pnt)
 
-    # prepare data to write to disc as csv
-    #pnt_df.loc[len(pnt_df) + 1] = [ID, x_random, y_random]
-    ID += 1
-
-print(pnt_list)
-    # write random point sample to csv file in the rootFolder to check on the points
-#pnt_df.to_csv(rootFolder + "test.csv", index=None, sep=';', mode='a')
 
 
     #PROJECTION PROBLEM ATTEMPTS - start
@@ -235,11 +288,11 @@ print(pnt_list)
     #extract value from point
 
 
-# 100 points from 0-20% strata?
-# 100 points from 21-40% strata?
-# 100 points from 41-60% strata?
-# 100 points from 61-80% strata?
-# 100 points from 81-100% strata?
+c0020 = [] #0-20% stratum
+c2140 = [] #21-40% stratum
+c4160 = [] #41-60% stratum
+c6180 = [] #61-80% stratum
+c80100 = [] #81-100% stratum
 
 
 
