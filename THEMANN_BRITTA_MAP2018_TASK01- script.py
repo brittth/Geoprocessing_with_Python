@@ -44,6 +44,7 @@ def GetCoordinates(file_list, root_folder):
         print("Coordinates of " + file + ": " + "(" + str(UL_x) + "," + str(UL_y) + ") and (" + str(LR_x) + "," + str(LR_y) + ")")
     return UL_x_list, UL_y_list, LR_x_list, LR_y_list
 
+
 # ####################################### FOLDER PATHS & GLOBAL VARIABLES ##################################### #
 
 rootFolder = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/MAP/Geoprocessing-in-python_MAP2018_data/Task01_data/"
@@ -63,7 +64,7 @@ path_L8_doy1 = L8_doy + ras1 + "_PBC_multiYear_Imagery.bsq"
 path_L8_doy2 = L8_doy + ras2 + "_PBC_multiYear_Imagery.bsq"
 path_L8_doy3 = L8_doy + ras3 + "_PBC_multiYear_Imagery.bsq"
 path_L8_doy4 = L8_doy + ras4 + "_PBC_multiYear_Imagery.bsq"
-
+'''
 path_L8_metrics1 = L8_met + ras1 + "_PBC_multiYear_Metrics.bsq"
 path_L8_metrics2 = L8_met + ras2 + "_PBC_multiYear_Metrics.bsq"
 path_L8_metrics3 = L8_met + ras3 + "_PBC_multiYear_Metrics.bsq"
@@ -78,7 +79,7 @@ path_S1_metricsVV1 = S1_met_VV + ras1 + ".tif"
 path_S1_metricsVV2 = S1_met_VV + ras2 + ".tif"
 path_S1_metricsVV3 = S1_met_VV + ras3 + ".tif"
 path_S1_metricsVV4 = S1_met_VV + ras4 + ".tif"
-
+'''
 # ####################################### PROCESSING ########################################################## #
 
 #1) Create random points
@@ -103,11 +104,11 @@ LR_y = min(LR_y_list)
 print("\nCorner coordinates of the area covered by the 4 tiles: \n UL(",UL_x,",",UL_y,") and LR(",LR_x,",",LR_y,")")
 
 # read VFC raster
-vfc = gdal.Open(path_VCF)
+vcf = gdal.Open(path_VCF)
 # get projection from raster
-vfc_pr = vfc.GetProjection()
+vcf_pr = vcf.GetProjection()
 target_SR = osr.SpatialReference()         # create empty spatial reference
-target_SR.ImportFromWkt(vfc_pr)            # get spatial reference from projection of raster
+target_SR.ImportFromWkt(vcf_pr)            # get spatial reference from projection of raster
 print("\nSpatial Reference of the VFC raster file: \n",target_SR)
 
 # generate random points
@@ -131,6 +132,9 @@ while len(pnt_list) < 5:
     pnt.AssignSpatialReference(target_SR)
     print("\nSpatial Reference of point feature with ID ",ID,": \n", pnt.GetSpatialReference())
 
+    #extract value from point
+
+
     # add Point geometry to MultiPoint geometry
     pnts.AddGeometry(pnt)
 
@@ -141,8 +145,7 @@ while len(pnt_list) < 5:
     pnt_df.loc[len(pnt_df) + 1] = [ID, x_random, y_random, "ToBeFilled"]
     ID += 1
 
-
-print("\nPoint list: \n",pnt_list)
+#print("\nPoint list: \n",pnt_list)
 
 # export MultiPoint geometry to WKT (Well Known Text)
 pnts_wkt = pnts.ExportToWkt()
@@ -158,134 +161,10 @@ shp_df = gpd.GeoDataFrame(pnt_df, geometry='geometry') # create new dataframe fo
 #shp_df.crs = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs" # add projection to dataframe
 shp_df.to_file('MyGeometries.shp', driver='ESRI Shapefile') # write dataframe to shapefile
 
-'''
-# create shapefile from MultiPoint geometry
-polygon = pnts
-driver = ogr.GetDriverByName('ESRI Shapefile')
-shapefile = driver.CreateDataSource(rootFolder + 'test.shp')
-# set spatial reference
-spatialreference = target_SR #ogr.osr.SpatialReference()
-#spatialreference.ImportFromEPSG(3035)
-#create the layer
-layer = shapefile.CreateLayer('pnts', spatialreference, ogr.wkbMultiPoint)
-layerDefinition = layer.GetLayerDefn()
-# add attributes to layer
-idField = ogr.FieldDefn('UID', ogr.OFTInteger)
-xField = ogr.FieldDefn('X_COORD', ogr.OFTReal)
-yField = ogr.FieldDefn('Y_COORD', ogr.OFTReal)
-vcfField = ogr.FieldDefn('VCF', ogr.OFTInteger)
-layer.CreateField(ID)
-layer.CreateField(polygon_ID)
-layer.CreateField(PA_name)
-
-# create SHP
-feature = ogr.Feature(layerDefinition) # greate a feature
-feature.SetGeometry(polygon) # put geometry into feature
-feature.SetField("point_ID", str(n)) # add attributes
-feature.SetField("polygon_ID", str((n*10)+m)) # add attributes
-feature.SetField("PA_name", pnt_df.iloc[n][1]) # add attributes
-layer.CreateFeature(feature) # put feature in layer
-'''
-    # write random point sample to csv file in the rootFolder to check on the points
+# CSV OUTPUT
+# write random point sample to csv file in the rootFolder to check on the points
 #pnt_df.to_csv(rootFolder + "test.csv", index=None, sep=';', mode='a')
 
-
-
-'''
-# still doesn't work in qgis, maybe it has to do with csv, try make shp file
-
-    # Save extent to a new Shapefile
-    outShapefile = "test.shp"
-    outDriver = ogr.GetDriverByName("ESRI Shapefile")
-
-    # Remove output shapefile if it already exists
-    if os.path.exists(outShapefile):
-        outDriver.DeleteDataSource(outShapefile)
-
-    # Create the output shapefile
-    outDataSource = outDriver.CreateDataSource(outShapefile)
-    outLayer = outDataSource.CreateLayer("test_bla", geom_type=ogr.wkbPoint)
-
-    # Add an ID field
-    idField = ogr.FieldDefn("id", ogr.OFTInteger)
-    outLayer.CreateField(idField)
-
-    # Create the feature and set values
-    featureDefn = outLayer.GetLayerDefn()
-    feature = ogr.Feature(featureDefn)
-    feature.SetGeometry(pnt)
-    feature.SetField("id", 1)
-    outLayer.CreateFeature(feature)
-
-    # Close DataSource
-    outDataSource.Destroy()
-'''
-'''
-    # .SHP
-    driver = ogr.GetDriverByName('ESRI Shapefile')
-    # create a shapefile for polygons
-    shapefile = driver.CreateDataSource(rootFolder+'test.shp')
-    # set spatial reference
-    #spatialreference = ogr.osr.SpatialReference()
-    #spatialreference.ImportFromEPSG(3035)
-    #create the layer
-    layer = shapefile.CreateLayer('test', target_SR, ogr.wkbPoint)
-    layerDefinition = layer.GetLayerDefn()
-
-    # add attributes to layer
-    #point_ID = ogr.FieldDefn('point_ID', ogr.OFTInteger)
-    #polygon_ID = ogr.FieldDefn('polygon_ID', ogr.OFTInteger)
-    #PA_name = ogr.FieldDefn('PA_name', ogr.OFTString)
-    #layer.CreateField(point_ID)
-    #layer.CreateField(polygon_ID)
-    #layer.CreateField(PA_name)
-
-    # create SHP
-    feature = ogr.Feature(layerDefinition) # create a feature
-    feature.SetGeometry(pnt) # put geometry into feature
-    feature.SetField("UID", str(ID)) # add attributes       #error
-    layer.CreateFeature(feature) # put feature in layer
-'''
-
-
-
-    #PROJECTION PROBLEM ATTEMPTS - start
-    #still need the right coordinate system: 102033 acc. qgis
-
-    #creating a blank spatial reference and filling it
-    #sr = osr.SpatialReference()
-    #sr.ImportFromEPSG(102033)
-    #sr.ImportFromWkt(vfc_pr) #error
-    #print(sr.GetAttrValue('PROJCS'))
-    #print("\nSpatial Reference stored under 102033: \n",pnt.GetSpatialReference())
-
-    # Get projection from Geometry
-    #feature = layer.GetNextFeature()
-    #geom = feature.GetGeometryRef()
-    #spatialRef = geom.GetSpatialReference()
-
-    #source_SR = pnt.GetSpatialRef()         # get spatial reference from sample layer
-    #print(source_SR)#error
-    #coordTrans = osr.CoordinateTransformation(source_SR, target_SR)     # transformation rule for coordinates from samples to raster
-    #coord = pnt.GetGeometryRef()
-    #coord_cl = coord.Clone()
-    #coord_cl.Transform(coordTrans)  # apply coordinate transformation
-
-    #pnt.to_crs({'init': 'EPSG:102033'})
-    #pnt.to_crs(target_SR)
-
-    #source = osr.SpatialReference()
-    #source.ImportFromEPSG(4326)
-    #target = osr.SpatialReference()
-    #target.ImportFromEPSG(102033)
-    #transform = osr.CoordinateTransformation(source, target)
-    #pnt.Transform(transform)
-    #print (pnt.ExportToWkt())
-
-    #PROJECTION PROBLEM ATTEMPTS - end
-
-
-    #extract value from point
 
 
 c0020 = [] #0-20% stratum
@@ -293,59 +172,6 @@ c2140 = [] #21-40% stratum
 c4160 = [] #41-60% stratum
 c6180 = [] #61-80% stratum
 c80100 = [] #81-100% stratum
-
-
-
-''' TRY TO SAVE AS SHAPEFILE
-# Write point coordinates to Shapefile
-shpDriver = ogr.GetDriverByName("ESRI Shapefile")
-if os.path.exists('points.shp'):
-    shpDriver.DeleteDataSource('points.shp')
-outDataSource = shpDriver.CreateDataSource('points.shp')
-outLayer = outDataSource.CreateLayer('points.shp', geom_type=ogr.wkbMultiPoint)
-featureDefn = outLayer.GetLayerDefn()
-outFeature = ogr.Feature(featureDefn)
-outFeature.SetGeometry(multipoint)
-outLayer.CreateFeature(outFeature)
-outFeature = None
-'''
-
-
-# TEST IF KML WORKS
-'''
-from osgeo import ogr
-ring = ogr.Geometry(ogr.wkbLinearRing)
-ring.AddPoint(1179091.1646903288, 712782.8838459781)
-ring.AddPoint(1161053.0218226474, 667456.2684348812)
-ring.AddPoint(1214704.933941905, 641092.8288590391)
-ring.AddPoint(1228580.428455506, 682719.3123998424)
-ring.AddPoint(1218405.0658121984, 721108.1805541387)
-ring.AddPoint(1179091.1646903288, 712782.8838459781)
-geom_poly = ogr.Geometry(ogr.wkbPolygon)
-geom_poly.AddGeometry(ring)
-kml = geom_poly.ExportToKML()
-print(kml)
-'''
-# create a polygon with these coordinates to generate random points in
-    # Create corner points
-#corners = ogr.Geometry(ogr.wkbLinearRing)
-#corners.AddPoint(UL_x, UL_y) #UL
-#corners.AddPoint(LR_x, UL_y) #UR
-#corners.AddPoint(UL_x, LR_y) #LL
-#corners.AddPoint(LR_x, LR_y) #LR
-    # Create polygon from corner points
-#geom = ogr.Geometry(ogr.wkbPolygon)
-#geom.AddGeometry(corners)
-#kml = geom.ExportToKML() #error wrong lat/lon unit
-#print (kml)
-
-# ALTERNATIVE, but don't know to save to check it
-#wkt = "LINESTRING ("+str(UL_x)+" "+str(UL_y)+", "+str(LR_x)+" "+str(UL_y)+", "+str(UL_x)+" "+str(LR_y)+", "+str(LR_x)+" "+str(LR_y)+")"
-#geom = ogr.CreateGeometryFromWkt(wkt)
-# Get Envelope returns a tuple (minX, maxX, minY, maxY)
-#env = geom.GetEnvelope()
-#print ("minX: %d, minY: %d, maxX: %d, maxY: %d" %(env[0],env[2],env[1],env[3]))
-
 
         #while loop to get 100 per condition
         #condition is percentage tree cover according to VCF
