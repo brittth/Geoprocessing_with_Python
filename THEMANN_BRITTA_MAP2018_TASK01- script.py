@@ -23,14 +23,14 @@ print("")
     # input: list of input files --> file_list
     # UL --> Upper Left corner
     # LR --> Lower Right corner
-def GetCoordinates(file_list, root_folder):
+def GetCoordinates(file_path_list):
     UL_x_list = []
     UL_y_list = []
     LR_x_list = []
     LR_y_list = []
-    for file in file_list:
+    for file in file_path_list:
         coord_list = []
-        ds = gdal.Open(root_folder + file, gdal.GA_ReadOnly)
+        ds = gdal.Open(file, gdal.GA_ReadOnly)
         gt = ds.GetGeoTransform()  # UL_x, x-coordinate spatial resolution, UL_y, # y-coord. spat.res.
         # Upper left
         UL_x, UL_y = gt[0], gt[3]
@@ -49,10 +49,6 @@ def GetCoordinates(file_list, root_folder):
 
 rootFolder = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/MAP/Geoprocessing-in-python_MAP2018_data/Task01_data/"
 
-ras1 = "Tile_x18999_y38999_1000x1000_2014-2015_CHACO"
-ras2 = "Tile_x18999_y38999_1000x1000_2014-2015_CHACO"
-ras3 = "Tile_x18999_y38999_1000x1000_2014-2015_CHACO"
-ras4 = "Tile_x18999_y38999_1000x1000_2014-2015_CHACO"
 L8_doy = rootFolder + "2015_L8_doy015/"
 L8_met = rootFolder + "2015_L8_metrics/"
 S1_met_VH = rootFolder + "2015_S1_metrics/VH_mean/"
@@ -60,48 +56,40 @@ S1_met_VV = rootFolder + "2015_S1_metrics/VV_mean/"
 
 path_VCF = rootFolder + "2000_VCF/20S_070W.tif"
 
-path_L8_doy1 = L8_doy + ras1 + "_PBC_multiYear_Imagery.bsq"
-path_L8_doy2 = L8_doy + ras2 + "_PBC_multiYear_Imagery.bsq"
-path_L8_doy3 = L8_doy + ras3 + "_PBC_multiYear_Imagery.bsq"
-path_L8_doy4 = L8_doy + ras4 + "_PBC_multiYear_Imagery.bsq"
-'''
-path_L8_metrics1 = L8_met + ras1 + "_PBC_multiYear_Metrics.bsq"
-path_L8_metrics2 = L8_met + ras2 + "_PBC_multiYear_Metrics.bsq"
-path_L8_metrics3 = L8_met + ras3 + "_PBC_multiYear_Metrics.bsq"
-path_L8_metrics4 = L8_met + ras4 + "_PBC_multiYear_Metrics.bsq"
-
-path_S1_metricsVH1 = S1_met_VH + ras1 + ".tif"
-path_S1_metricsVH2 = S1_met_VH + ras2 + ".tif"
-path_S1_metricsVH3 = S1_met_VH + ras3 + ".tif"
-path_S1_metricsVH4 = S1_met_VH + ras4 + ".tif"
-
-path_S1_metricsVV1 = S1_met_VV + ras1 + ".tif"
-path_S1_metricsVV2 = S1_met_VV + ras2 + ".tif"
-path_S1_metricsVV3 = S1_met_VV + ras3 + ".tif"
-path_S1_metricsVV4 = S1_met_VV + ras4 + ".tif"
-'''
 # ####################################### PROCESSING ########################################################## #
 
 #1) Create random points
     #1.1) Tree cover strata: 100x0-20% , 100x21-40%,... covered by all four tiles = 500 points
 
-# write the file names containing ".bsq" of each tile into a file_list_bsq
-file_list_all = os.listdir(L8_doy)
-print("All files in folder: \n",file_list_all,"\n")
-file_list_bsq = []
-for file in file_list_all:
+# write the file names containing ".bsq" or "tif" of each tile into a file path list
+folder_list = [L8_doy, L8_met,S1_met_VH,S1_met_VV]
+file_path_list_tiles = []
+for folder in folder_list:
+    file_list = os.listdir(folder)
+    for file in file_list:
+        file_path = folder + file
+        file_path_list_tiles.append(file_path)
+print("All files in folder: \n",file_path_list_tiles,"\n")
+file_path_list_bsq_tif = []
+for file in file_path_list_tiles:
     if "bsq" in file:
-        file_list_bsq.append(file)
-print("Only bsq files in folder: \n",file_list_bsq,"\n")
+        file_path_list_bsq_tif.append(file)
+    if "tif" in file:
+        file_path_list_bsq_tif.append(file)
+print("Only bsq files in folder: \n",file_path_list_bsq_tif,"\n")
 
-# identify UL and LR corner coordinates of the area covered by the 4 tiles
-print("Extracting corner coordinates of the 4 tiles:")
-UL_x_list, UL_y_list, LR_x_list, LR_y_list = GetCoordinates(file_list_bsq,L8_doy)
-UL_x = min(UL_x_list)
-UL_y = max(UL_y_list)
-LR_x = max(LR_x_list)
-LR_y = min(LR_y_list)
-print("\nCorner coordinates of the area covered by the 4 tiles: \n UL(",UL_x,",",UL_y,") and LR(",LR_x,",",LR_y,")")
+# check if all tile datasets have the same projection
+proj_list = []
+for file in file_path_list_bsq_tif:
+    ras = gdal.Open(file)
+    ras_pr = ras.GetProjection()  # get projection from raster
+    print(ras_pr)
+    proj_list.append(ras_pr)
+print(proj_list)
+if(len(set(proj_list))==1):
+    print ("All tile files have the same projection!")
+else:
+    print ("Not all tile files have the same projection! Reprojecting files is necessary before identifying corner points of tile area!")
 
 # read VFC raster
 vcf = gdal.Open(path_VCF)
@@ -111,6 +99,27 @@ target_SR = osr.SpatialReference()         # create empty spatial reference
 target_SR.ImportFromWkt(vcf_pr)            # get spatial reference from projection of raster
 print("\nSpatial Reference of the VFC raster file: \n",target_SR)
 
+# reproject tiles to VFC target spatial reference
+proj_tile_files = []
+for file in file_path_list_bsq_tif:
+    ras = gdal.Open(file) # open raster
+    ras_pr = ras.GetProjection() # get projection from raster
+    print(ras_pr)
+    source_SR = osr.SpatialReference()       # create empty spatial reference
+    source_SR.ImportFromWkt(ras_pr)         # get spatial reference from projection of raster
+    coordTrans = osr.CoordinateTransformation(source_SR, target_SR) # transformation rule for coordinates from tile raster to VFC raster
+    ras.Transform(coordTrans)  # apply coordinate transformation #ERROR
+    print(ras_pr == ras.GetProjection())
+    print(ras.GetProjection())
+
+# identify UL and LR corner coordinates of the area covered by the 4 tiles
+print("Extracting corner coordinates of the 4 tiles:")
+UL_x_list, UL_y_list, LR_x_list, LR_y_list = GetCoordinates(file_path_list_bsq_tif)
+UL_x = min(UL_x_list)
+UL_y = max(UL_y_list)
+LR_x = max(LR_x_list)
+LR_y = min(LR_y_list)
+print("\nCorner coordinates of the area covered by the 4 tiles: \n UL(",UL_x,",",UL_y,") and LR(",LR_x,",",LR_y,")")
 # generate random points
 
 # random points data frame preparation
@@ -120,7 +129,7 @@ pnt_df = pd.DataFrame(columns=["UID", "X_COORD", "Y_COORD", "VCF"])
 pnt_list = [] # create list to store point information in
 pnts = ogr.Geometry(ogr.wkbMultiPoint)  # create point class object MultiPoint
 
-while len(pnt_list) < 5:
+while len(pnt_list) < 3:
     x_random = random.choice(np.arange(UL_x, LR_x, 30)) # generate random x coordinate from range of x values
     y_random = random.choice(np.arange(LR_y, UL_y, 30)) # generate random y coordinate from range of y values
 
@@ -130,10 +139,25 @@ while len(pnt_list) < 5:
 
     # assign spatial reference system from VFC raster to Point geometry
     pnt.AssignSpatialReference(target_SR)
-    print("\nSpatial Reference of point feature with ID ",ID,": \n", pnt.GetSpatialReference())
+    #print("\nSpatial Reference of point feature with ID ",ID,": \n", pnt.GetSpatialReference())
 
     #extract value from point
-
+    vcf_gt = vcf.GetGeoTransform()  # get projection and transformation to calculate absolute raster coordinates
+    #print(vcf_gt)
+    vcf_px = int((x_random - vcf_gt[0]) / vcf_gt[1])
+    print("vcf_px ",vcf_px)
+    vcf_py = int((y_random - vcf_gt[3]) / vcf_gt[5])
+    print("vcf_py ",vcf_py)
+    vcf_rb = vcf.GetRasterBand(1)
+    #print(vcf_rb)
+    struc_vcf_var = vcf_rb.ReadRaster(vcf_px, vcf_py, 1, 1)
+    print("struc_vcf_var ",struc_vcf_var)
+    if struc_vcf_var is None:
+        vcf_value = struc_vcf_var
+    else:
+        vcf_val = struct.unpack('H', struc_vcf_var)
+        vcf_value = vcf_val[0]
+    print("vcf_value ", vcf_value)
 
     # add Point geometry to MultiPoint geometry
     pnts.AddGeometry(pnt)
@@ -142,7 +166,7 @@ while len(pnt_list) < 5:
     pnt_list.append(pnt)
 
     # prepare data to write to disc as csv
-    pnt_df.loc[len(pnt_df) + 1] = [ID, x_random, y_random, "ToBeFilled"]
+    pnt_df.loc[len(pnt_df) + 1] = [ID, x_random, y_random, vcf_value]
     ID += 1
 
 #print("\nPoint list: \n",pnt_list)
