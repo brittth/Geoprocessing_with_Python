@@ -41,7 +41,7 @@ def GetCoordinates(file_path_list):
         UL_y_list.append(UL_y)
         LR_x_list.append(LR_x)
         LR_y_list.append(LR_y)
-        print("Coordinates of raster #" + str(counter) + ": " + "(" + str(UL_x) + "," + str(UL_y) + ") and (" + str(LR_x) + "," + str(LR_y) + ")")
+        #print("Coordinates of raster #" + str(counter) + ": " + "(" + str(UL_x) + "," + str(UL_y) + ") and (" + str(LR_x) + "," + str(LR_y) + ")")
         counter += 1
     return UL_x_list, UL_y_list, LR_x_list, LR_y_list
 
@@ -98,7 +98,7 @@ vcf = gdal.Open(path_VCF)           # read VFC raster
 vcf_pr = vcf.GetProjection()        # get projection from raster
 target_SR = osr.SpatialReference()  # create empty spatial reference
 target_SR.ImportFromWkt(vcf_pr)     # get spatial reference from projection of raster
-print("\nSpatial Reference of the VFC raster file: \n",target_SR)
+#print("\nSpatial Reference of the VFC raster file: \n",target_SR)
 
 # set reprojection rule for reprojecting tiles to VFC target spatial reference
 # using only the first L8_doy image --> reprojecting all here didn't work s. below
@@ -136,7 +136,7 @@ print("\nCorner coordinates of the area covered by the 4 tiles: \n UL(",UL_x,","
 # random points data frame preparation
 ID = 0
 UID = 0
-pnt_df = pd.DataFrame(columns=["UID", "X_COORD", "Y_COORD", "VCF", "propClass"])
+pnt_df = pd.DataFrame(columns=["UID", "X_COORD", "Y_COORD", "VCF", "stratum"])
 
 # create lists to store point information in
 pnt_list = []
@@ -146,7 +146,7 @@ c4160 = [] #41-60% stratum
 c6180 = [] #61-80% stratum
 c80100 = [] #81-100% stratum
 #pnts = ogr.Geometry(ogr.wkbMultiPoint)  # create point class object MultiPoint
-while len(pnt_list) < 500:
+while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 100 or len(c80100) < 100:#len(pnt_list) < 500: #at least 1 of each but mostly more
     x_random = random.choice(np.arange(UL_x, LR_x, 30)) # generate random x coordinate from range of x values
     y_random = random.choice(np.arange(LR_y, UL_y, 30)) # generate random y coordinate from range of y values
 
@@ -158,13 +158,13 @@ while len(pnt_list) < 500:
     coord_cl = pnt.Clone()  # clone sample geometry
     coord_cl.Transform(coordTrans)  # apply coordinate transformation
     x, y = coord_cl.GetX(), coord_cl.GetY()  # get x and y coordinates of transformed sample point
-    print("\nRandom Point #",ID,":")
-    print("Coordinates :", x_random, y_random)
-    print("Transformed coordinates :", x, y)
+    print("\nRandom Point #",ID)#":")
+    #print("Coordinates :", x_random, y_random)
+    #print("Transformed coordinates :", x, y)
     #pnt.AssignSpatialReference(target_SR) #NOT NECESSARY
     #print("\nSpatial Reference of point feature with ID ",ID,": \n", pnt.GetSpatialReference()) #NOT NECESSARY
 
-    #extract value from point
+    # extract value from point
     vcf_gt = vcf.GetGeoTransform()  # get projection and transformation to calculate absolute raster coordinates
     #print(vcf_gt)
     vcf_px = int((x - vcf_gt[0]) / vcf_gt[1])
@@ -183,58 +183,45 @@ while len(pnt_list) < 500:
         vcf_value = vcf_val[0]
     #print("vcf_value ", vcf_value)
 
-    #assign point to proportion class list to get 100 of each
-    if vcf_value <= 20:# 0-20% stratum
-        c0020.append(vcf_value)
-        propClass = 1
-    elif vcf_value <= 40:# 21-40% stratum
-        c2140.append(vcf_value)
-        propClass = 2
-    elif vcf_value <= 60:# 41-60% stratum
-        c4160.append(vcf_value)
-        propClass = 3
-    elif vcf_value <= 80:# 61-80% stratum
-        c6180.append(vcf_value)
-        propClass = 4
-    else:# 81-100% stratum
-        c80100.append(vcf_value)
-        propClass = 5
-
-    # stop while-loop when 100 points with VCF values of each stratum are obtained
-    # ATTEMPT 1
-    '''
-    while len(c0020) < 1 or len(c2140) < 1 or len(c4160) < 1 or len(c6180) < 1 or len(c80100) < 1:
-    '''
-    # ATTEMPT 2
-    '''
-    while len(c0020) < 1 and len(c2140) < 1 and len(c4160) < 1 and len(c6180) < 1 and len(c80100) < 1:
-    '''
+    # write points into point list if the respective stratum is not complete yet
+    if vcf_value <= 20:                 # 0-20% stratum
+        if len(c0020) < 100:            # only save point if there is less than 100 in this stratum
+            c0020.append(vcf_value)     # assign point to stratum
+            stratum = 1                 # FOR TESTING: give class number for preview in dataframe
+            pnt_list.append(pnt)        # append to point list
+            pnt_df.loc[len(pnt_df) + 1] = [UID, x, y, vcf_value, stratum]# prepare data frame for shapefile
+            UID += 1                    # count up unique ID only when point has been added
+    elif vcf_value <= 40:               # 21-40% stratum
+        if len(c2140) < 100:
+            c2140.append(vcf_value)
+            stratum = 2
+            pnt_list.append(pnt)
+            pnt_df.loc[len(pnt_df) + 1] = [UID, x, y, vcf_value, stratum]
+            UID += 1
+    elif vcf_value <= 60:               # 41-60% stratum
+        if len(c4160) < 100:
+            c4160.append(vcf_value)
+            stratum = 3
+            pnt_list.append(pnt)
+            pnt_df.loc[len(pnt_df) + 1] = [UID, x, y, vcf_value, stratum]
+            UID += 1
+    elif vcf_value <= 80:               # 61-80% stratum
+        if len(c6180) < 100:
+            c6180.append(vcf_value)
+            stratum = 4
+            pnt_list.append(pnt)
+            pnt_df.loc[len(pnt_df) + 1] = [UID, x, y, vcf_value, stratum]
+            UID += 1
+    else:                               # 81-100% stratum
+        if len(c80100) < 100:
+            c80100.append(vcf_value)
+            stratum = 5
+            pnt_list.append(pnt)
+            pnt_df.loc[len(pnt_df) + 1] = [UID, x, y, vcf_value, stratum]
+            UID += 1
 
     # add Point geometry to MultiPoint geometry #NOT NECESSARY
     #pnts.AddGeometry(pnt)
-
-    # append to point list
-    pnt_list.append(pnt)
-
-    # prepare data to write to disc as csv
-    pnt_df.loc[len(pnt_df) + 1] = [UID, x, y, vcf_value, propClass]
-    UID += 1
-
-
-    #ATTEMPT 3
-    '''
-    if len(c0020) == 1 and len(c2140) == 1 and len(c4160) == 1 and len(c6180) == 1 and len(c80100) == 1:
-        break
-    '''
-    #ATTEMPT 4
-    ''' 
-    if len(c0020) == 1:
-        if len(c2140) == 1:
-            if len(c4160) == 1:
-                if len(c6180) == 1:
-                    if len(c80100) == 1:
-                        break
-    '''
 
     print("\nTotal Points:",len(pnt_list), "\nc0020:", len(c0020),"\nc2140:", len(c2140),"\nc4160:", len(c4160),"\nc6180:", len(c6180),"\nc80100:", len(c80100))
     ID += 1
