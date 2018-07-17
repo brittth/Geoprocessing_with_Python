@@ -130,29 +130,44 @@ while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 1
     pnt = ogr.Geometry(ogr.wkbPoint)  # create point class object Point
     pnt.AddPoint(x_random, y_random)  # add point coordinate
 
-    # extract band values of all tile rasters at Point locations
+    # only use tile rasters where Point is located
+    for i in range(len(UL_y_list)-1):
+        if UL_y_list[i] > y_random > UL_y_list[i+1]:
+            print("This point is within the tile.\n")
+        else:
+            print("Point is not within this tile.\n")
+
+
+    # extract band values of all tile rasters at Point location
     tileBand_values = []                        # prepare list for tile band values per point
-    tileBand_values_inner = []                  # prepare list for tile band values per raster
+    rasterID = 1
     for tile_ras in file_path_list_bsq_tif:     # go through all tile rasters
-        print("raster ", tile_ras)
         ras = gdal.Open(tile_ras)               # read tile raster
+        #print("\nRaster: ", tile_ras)
         tile_gt = ras.GetGeoTransform()         # get projection and transformation
         tile_px = int((x_random - tile_gt[0]) / tile_gt[1]) # calculate absolute raster coordinates
         tile_py = int((y_random - tile_gt[3]) / tile_gt[5]) # calculate absolute raster coordinates
         rb_count = ras.RasterCount              # get number of raster bands in raster
         # extract value for band
-        for i in (range(1,rb_count)):
+        for i in (range(1,rb_count+1)):
             rb = ras.GetRasterBand(i)
             struc_tile_var = rb.ReadRaster(tile_px, tile_py, 1, 1)
             if struc_tile_var is None:
                 tile_value = struc_tile_var
             else:
-                tile_val = struct.unpack('H', struc_tile_var)
+                if ".tif" in tile_ras:          # value extraction for tif files
+                    tile_val = struct.unpack('f', struc_tile_var) # [f=float size 4]
+                else:                           # value extraction for bsq files
+                    tile_val = struct.unpack('H', struc_tile_var) # [H=unsigned short integer]
                 tile_value = tile_val[0]
-            # store band value in list
-            print(tile_value)
-            tileBand_values_inner.append(tile_value)
-        tileBand_values.append(tileBand_values_inner)
+            # store band value in list unless the tile raster is not covering point (None)
+            if tile_value != None:
+                tileBand_values.append(tile_value)
+
+            # console output to keep track
+            print("Random Point #", ID, "    Raster #", rasterID,"    Number of bands: ", rb_count, "    Band", i,"    Extracted value: ", tile_value)
+
+        rasterID += 1
 
     # assign spatial reference system from VFC raster to Point geometry
     coord_cl = pnt.Clone()                      # clone sample geometry
@@ -173,8 +188,6 @@ while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 1
     else:
         vcf_val = struct.unpack('b', struc_vcf_var) # [b=signed char]
         vcf_value = vcf_val[0]
-
-    print("\nRandom Point #", ID) # console output to keep track
 
     # write points into point list if the respective stratum is not complete yet
     if vcf_value <= 20 and len(c0020) < 100:    # 0-20% stratum
@@ -219,7 +232,7 @@ while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 1
         UID += 1
 
     # console output to keep track
-    print("\nTotal Points:",len(pnt_list), "\nc0020:", len(c0020),"\nc2140:", len(c2140),"\nc4160:", len(c4160),"\nc6180:", len(c6180),"\nc80100:", len(c80100))
+    print("\nTotal Points:",len(pnt_list), "\nc0020:", len(c0020),"\nc2140:", len(c2140),"\nc4160:", len(c4160),"\nc6180:", len(c6180),"\nc80100:", len(c80100),"\n")
 
     ID += 1 # to keep track of random points tested for the stratum conditions
 
@@ -243,7 +256,7 @@ shp_df.to_file('THEMANN_BRITTA_MAP-task01_randomPoints.shp', driver='ESRI Shapef
 # STORE RANDOM POINTS WITH RASTER VALUES IN ARRAYS
 # Feature Matrix (x) --> classes
 arr_fm = np.asarray(feature_matrix)
-print("\nFeature Matrix (x) shape: ",arr_fm.shape) #(500,?) --> 770 rows and 4 columns
+print("\nFeature Matrix (x) shape: ",arr_fm.shape) #(500,68) --> 500 rows and 68 columns
 x_dim = arr_fm.shape[1]
 y_dim = arr_fm.shape[0]
 outName = "SURNAME_NAME_MAP-task01_np-array_x-values.npy"
