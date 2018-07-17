@@ -132,6 +132,7 @@ while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 1
 
     # extract band values of all tile rasters at Point locations
     tileBand_values = []                        # prepare list for tile band values per point
+    tileBand_values_inner = []                  # prepare list for tile band values per raster
     for tile_ras in file_path_list_bsq_tif:     # go through all tile rasters
         print("raster ", tile_ras)
         ras = gdal.Open(tile_ras)               # read tile raster
@@ -150,9 +151,9 @@ while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 1
                 tile_value = tile_val[0]
             # store band value in list
             print(tile_value)
-            tileBand_values.extend(tile_value)
+            tileBand_values_inner.append(tile_value)
+        tileBand_values.append(tileBand_values_inner)
 
-#--------------
     # assign spatial reference system from VFC raster to Point geometry
     coord_cl = pnt.Clone()                      # clone sample geometry
     coord_cl.Transform(coordTrans)              # apply coordinate transformation
