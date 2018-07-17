@@ -131,17 +131,18 @@ while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 1
     pnt.AddPoint(x_random, y_random)  # add point coordinate
 
     # only use tile rasters where Point is located
-    for i in range(len(UL_y_list)-1):
-        if UL_y_list[i] > y_random > UL_y_list[i+1]:
-            print("This point is within the tile.\n")
-        else:
-            print("Point is not within this tile.\n")
+    #for i in range(len(UL_y_list)-1):
+    #    if UL_y_list[i] > y_random > UL_y_list[i+1]:
+    #        print("This point is within the tile.", i)
+    #    else:
+    #        print("Point is not within this tile.", i)
 
 
     # extract band values of all tile rasters at Point location
     tileBand_values = []                        # prepare list for tile band values per point
-    rasterID = 1
+    rasterID = 0                                # to track progress
     for tile_ras in file_path_list_bsq_tif:     # go through all tile rasters
+        #if UL_y_list[rasterID] > y_random > UL_y_list[rasterID+1]: # only consider rasters where Point is located
         ras = gdal.Open(tile_ras)               # read tile raster
         #print("\nRaster: ", tile_ras)
         tile_gt = ras.GetGeoTransform()         # get projection and transformation
@@ -166,6 +167,8 @@ while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 1
 
             # console output to keep track
             print("Random Point #", ID, "    Raster #", rasterID,"    Number of bands: ", rb_count, "    Band", i,"    Extracted value: ", tile_value)
+        #else:
+        #    print("Random Point #", ID, "Raster #", rasterID, "The random point is outside of this raster!")
 
         rasterID += 1
 
@@ -239,8 +242,6 @@ while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 1
 
 # CHECK RESULT
 #print("\nPoint list: \n",pnt_list)
-
-# count Points geometries in Multipoint geometry
 #print("\nNumber of random points: ",len(pnt_list))
 
 
@@ -255,45 +256,18 @@ shp_df.to_file('THEMANN_BRITTA_MAP-task01_randomPoints.shp', driver='ESRI Shapef
 
 # STORE RANDOM POINTS WITH RASTER VALUES IN ARRAYS
 # Feature Matrix (x) --> classes
-arr_fm = np.asarray(feature_matrix)
-print("\nFeature Matrix (x) shape: ",arr_fm.shape) #(500,68) --> 500 rows and 68 columns
-x_dim = arr_fm.shape[1]
-y_dim = arr_fm.shape[0]
-outName = "SURNAME_NAME_MAP-task01_np-array_x-values.npy"
-np.save(outName, arr_fm)
-print(arr_fm)
+arr_fm = np.asarray(feature_matrix)                 # create arraay
+print("\nFeature Matrix (x) shape: ",arr_fm.shape)  #(500,68) --> 500 rows and 68 columns
+outName = "SURNAME_NAME_MAP-task01_np-array_x-values.npy"   # output file name
+np.save(outName, arr_fm)                                    # save array
+#print(arr_fm)
 
 # Target Vector (y) --> classes
 arr_tv = np.asarray(target_vector)
 print("\nTarget vector (y) shape:", arr_tv.shape) #(500,) --> 500 rows and 1 column
-x_dim = 1 #arr_train_cl.shape[1] --> error
-y_dim = arr_tv.shape[0]
 outName = "THEMANN_BRITTA_MAP-task01_np-array_y-values.npy"
 np.save(outName, arr_tv)
-print(arr_tv)
-
-
-# READ SHAPEFILE (to keep working without having to execute the above each time)
-#driver = ogr.GetDriverByName("ESRI Shapefile")
-#pnt = driver.Open("THEMANN_BRITTA_MAP-task01_randomPoints.shp",1)
-#pnt_lyr = pnt.GetLayer()
-
-#------------------------------------------------------ PART II -------------------------------------------------------#
-'''
-# extracted training values --> trainingDS_features_4_770.npy
-arr_train = np.asarray(df_list)
-print("\ntrainingDS_features ",arr_train.shape) #(770,4) --> 770 rows and 4 columns
-
-# classes array --> trainingDS_labels_1_770.npy
-arr_train_cl = np.asarray(pt_list)
-print("trainingDS_labels ", arr_train_cl.shape) #(770,) --> 770 rows and 1 column
-'''
-#2) Create numpy arrays
-    #2.1) Folder structure untouched
-    #2.2) Extract all band values for each raster file
-        #scikit-learn structure: Feature Matrix (x) & Target Vector (y)
-        #for-loop to go through each band of a raster
-    #2.3) Raster file order not important
+#print(arr_tv)
 
 # SURNAME_NAME_MAP-task01_np-array_x-values.npy
 # SURNAME_NAME_MAP-task01_np-array_y-values.npy
