@@ -9,6 +9,7 @@ import geopandas as gpd
 from shapely.geometry import Point
 import struct
 import random
+import sys
 
 # ####################################### SET TIME-COUNT ###################################################### #
 
@@ -58,8 +59,6 @@ path_VCF = rootFolder + "2000_VCF/20S_070W.tif"
 
 # ####################################### PROCESSING ########################################################## #
 
-#------------------------------------------------------ PART I --------------------------------------------------------#
-
 # IDENTIFY EXTENT OF THE AREA COVERED BY THE 4 TILE
 # write the file names containing ".bsq" or "tif" of each tile into a file path list
 folder_list = [L8_doy, L8_met,S1_met_VH,S1_met_VV]
@@ -96,14 +95,14 @@ target_SR = osr.SpatialReference()  # create empty spatial reference
 target_SR.ImportFromWkt(vcf_pr)     # get spatial reference from projection of raster
 #print("\nSpatial Reference of the VFC raster file: \n",target_SR)
 
-# set reprojection rule for reprojecting tiles to VFC target spatial reference
+# get transformation rule for tiles to VFC target spatial reference
 ras = gdal.Open(file_path_list_bsq_tif[0])  # read tile raster (first in list selected)
 ras_pr = ras.GetProjection()                # get projection from raster
 source_SR = osr.SpatialReference()          # create empty spatial reference
 source_SR.ImportFromWkt(ras_pr)             # get spatial reference from projection of raster
 coordTrans = osr.CoordinateTransformation(source_SR, target_SR)# transformation rule for coordinates from tile raster to VFC raster
 
-'''
+
 # PREPARATION FOR POINT EXTRACTION
 # point id (each point) and unique point id (only stored point)
 ID = 0
@@ -111,12 +110,14 @@ UID = 0
 # random points data frame preparation
 pnt_df = pd.DataFrame(columns=["UID", "X_COORD", "Y_COORD", "VCF"]) # FOR TESTING ADD: , "stratum"])
 # create lists to store point information in
-pnt_list = [] # all stored points
-c0020 = [] # 0-20% stratum
-c2140 = [] # 21-40% stratum
-c4160 = [] # 41-60% stratum
-c6180 = [] # 61-80% stratum
-c80100 = [] # 81-100% stratum
+pnt_list = []   # all stored points
+c0020 = []      # 0-20% stratum
+c2140 = []      # 21-40% stratum
+c4160 = []      # 41-60% stratum
+c6180 = []      # 61-80% stratum
+c80100 = []     # 81-100% stratum
+feature_matrix = [] # x
+target_vector = []  # y
 
 
 # RANDOM POINT GENERATION AND STORAGE
@@ -129,10 +130,33 @@ while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 1
     pnt = ogr.Geometry(ogr.wkbPoint)  # create point class object Point
     pnt.AddPoint(x_random, y_random)  # add point coordinate
 
+    # extract band values of all tile rasters at Point locations
+    tileBand_values = []                        # prepare list for tile band values per point
+    for tile_ras in file_path_list_bsq_tif:     # go through all tile rasters
+        print("raster ", tile_ras)
+        ras = gdal.Open(tile_ras)               # read tile raster
+        tile_gt = ras.GetGeoTransform()         # get projection and transformation
+        tile_px = int((x_random - tile_gt[0]) / tile_gt[1]) # calculate absolute raster coordinates
+        tile_py = int((y_random - tile_gt[3]) / tile_gt[5]) # calculate absolute raster coordinates
+        rb_count = ras.RasterCount              # get number of raster bands in raster
+        # extract value for band
+        for i in (range(1,rb_count)):
+            rb = ras.GetRasterBand(i)
+            struc_tile_var = rb.ReadRaster(tile_px, tile_py, 1, 1)
+            if struc_tile_var is None:
+                tile_value = struc_tile_var
+            else:
+                tile_val = struct.unpack('H', struc_tile_var)
+                tile_value = tile_val[0]
+            # store band value in list
+            print(tile_value)
+            tileBand_values.extend(tile_value)
+
+#--------------
     # assign spatial reference system from VFC raster to Point geometry
-    coord_cl = pnt.Clone()  # clone sample geometry
-    coord_cl.Transform(coordTrans)  # apply coordinate transformation
-    x, y = coord_cl.GetX(), coord_cl.GetY()  # get x and y coordinates of transformed sample point
+    coord_cl = pnt.Clone()                      # clone sample geometry
+    coord_cl.Transform(coordTrans)              # apply coordinate transformation
+    x, y = coord_cl.GetX(), coord_cl.GetY()     # get x and y coordinates of transformed sample point
     #print("\nRandom Point #",ID,":")
     #print("Coordinates :", x_random, y_random)
     #print("Transformed coordinates :", x, y)
@@ -152,34 +176,44 @@ while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 1
     print("\nRandom Point #", ID) # console output to keep track
 
     # write points into point list if the respective stratum is not complete yet
-    if vcf_value <= 20 and len(c0020) < 100:# 0-20% stratum
-        c0020.append(vcf_value)             # assign point to stratum
-        #stratum = 1                         # FOR TESTING: give class number for preview in dataframe
-        pnt_list.append(pnt)                # append to point list
+    if vcf_value <= 20 and len(c0020) < 100:    # 0-20% stratum
+        c0020.append(vcf_value)                 # assign point to stratum
+        #stratum = 1                            # FOR TESTING: give class number for preview in dataframe
+        pnt_list.append(pnt)                    # append point to point list
+        feature_matrix.append(tileBand_values)  # append tile band values to feature matrix list
+        target_vector.append(vcf_value)         # append vcf value to target vector list
         pnt_df.loc[len(pnt_df) + 1] = [UID, x, y, vcf_value] # prepare data frame for shapefile # FOR TESTING ADD: , stratum])
         UID += 1                            # count up unique ID only when point has been added
     elif vcf_value <= 40 and len(c2140) < 100: # 21-40% stratum
         c2140.append(vcf_value)
         #stratum = 2
         pnt_list.append(pnt)
+        feature_matrix.append(tileBand_values)
+        target_vector.append(vcf_value)
         pnt_df.loc[len(pnt_df) + 1] = [UID, x, y, vcf_value] # FOR TESTING ADD: , stratum])
         UID += 1
     elif vcf_value <= 60 and len(c4160) < 100: # 41-60% stratum
         c4160.append(vcf_value)
         #stratum = 3
         pnt_list.append(pnt)
+        feature_matrix.append(tileBand_values)
+        target_vector.append(vcf_value)
         pnt_df.loc[len(pnt_df) + 1] = [UID, x, y, vcf_value] # FOR TESTING ADD: , stratum])
         UID += 1
     elif vcf_value <= 80 and len(c6180) < 100: # 61-80% stratum
         c6180.append(vcf_value)
         #stratum = 4
         pnt_list.append(pnt)
+        feature_matrix.append(tileBand_values)
+        target_vector.append(vcf_value)
         pnt_df.loc[len(pnt_df) + 1] = [UID, x, y, vcf_value] # FOR TESTING ADD: , stratum])
         UID += 1
     elif vcf_value <= 100 and len(c80100) < 100: # 81-100% stratum
         c80100.append(vcf_value)
         #stratum = 5
         pnt_list.append(pnt)
+        feature_matrix.append(tileBand_values)
+        target_vector.append(vcf_value)
         pnt_df.loc[len(pnt_df) + 1] = [UID, x, y, vcf_value] # FOR TESTING ADD: , stratum])
         UID += 1
 
@@ -196,22 +230,50 @@ while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 1
 #print("\nNumber of random points: ",len(pnt_list))
 
 
-# STORE RANDOM POINTS IN SHAPEFILE
+# STORE RANDOM POINTS WITH VCF VALUES IN SHAPEFILE
 print("\nMultiPoint Dataframe : \n",pnt_df)
 
 # create Shapefile from Pandas dataframe
 pnt_df['geometry'] = pnt_df.apply(lambda x: Point((float(x.X_COORD), float(x.Y_COORD))), axis=1)# combine lat and lon column to a shapely Point() object (w/ geometry column)
 shp_df = gpd.GeoDataFrame(pnt_df, geometry='geometry')                                          # create new dataframe for shapefile with designated geometry column
 shp_df.to_file('THEMANN_BRITTA_MAP-task01_randomPoints.shp', driver='ESRI Shapefile')           # write dataframe to shapefile
-'''
+
+
+# STORE RANDOM POINTS WITH RASTER VALUES IN ARRAYS
+# Feature Matrix (x) --> classes
+arr_fm = np.asarray(feature_matrix)
+print("\nFeature Matrix (x) shape: ",arr_fm.shape) #(500,?) --> 770 rows and 4 columns
+x_dim = arr_fm.shape[1]
+y_dim = arr_fm.shape[0]
+outName = "SURNAME_NAME_MAP-task01_np-array_x-values.npy"
+np.save(outName, arr_fm)
+print(arr_fm)
+
+# Target Vector (y) --> classes
+arr_tv = np.asarray(target_vector)
+print("\nTarget vector (y) shape:", arr_tv.shape) #(500,) --> 500 rows and 1 column
+x_dim = 1 #arr_train_cl.shape[1] --> error
+y_dim = arr_tv.shape[0]
+outName = "THEMANN_BRITTA_MAP-task01_np-array_y-values.npy"
+np.save(outName, arr_tv)
+print(arr_tv)
+
 
 # READ SHAPEFILE (to keep working without having to execute the above each time)
-driver = ogr.GetDriverByName("ESRI Shapefile")
-pnt = driver.Open("THEMANN_BRITTA_MAP-task01_randomPoints.shp",1)
-pnt_lyr = pnt.GetLayer()
+#driver = ogr.GetDriverByName("ESRI Shapefile")
+#pnt = driver.Open("THEMANN_BRITTA_MAP-task01_randomPoints.shp",1)
+#pnt_lyr = pnt.GetLayer()
 
 #------------------------------------------------------ PART II -------------------------------------------------------#
+'''
+# extracted training values --> trainingDS_features_4_770.npy
+arr_train = np.asarray(df_list)
+print("\ntrainingDS_features ",arr_train.shape) #(770,4) --> 770 rows and 4 columns
 
+# classes array --> trainingDS_labels_1_770.npy
+arr_train_cl = np.asarray(pt_list)
+print("trainingDS_labels ", arr_train_cl.shape) #(770,) --> 770 rows and 1 column
+'''
 #2) Create numpy arrays
     #2.1) Folder structure untouched
     #2.2) Extract all band values for each raster file
@@ -219,7 +281,8 @@ pnt_lyr = pnt.GetLayer()
         #for-loop to go through each band of a raster
     #2.3) Raster file order not important
 
-#output form: pandas dataframe - ID,VCF,(x,y),raster band values
+# SURNAME_NAME_MAP-task01_np-array_x-values.npy
+# SURNAME_NAME_MAP-task01_np-array_y-values.npy
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
 
 print("")
