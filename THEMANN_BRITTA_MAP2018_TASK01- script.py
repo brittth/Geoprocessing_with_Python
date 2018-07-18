@@ -58,6 +58,7 @@ def storePoint(pnt,UID):
     target_vector.append(vcf_value)  # append vcf value to target vector list
     pnt_df.loc[len(pnt_df) + 1] = [UID, x, y, vcf_value]  # prepare data frame for shapefile # FOR TESTING ADD: , stratum])
     UID += 1  # count up unique ID only when point has been added
+    return pnt_df, UID
 
 # ####################################### FOLDER PATHS & GLOBAL VARIABLES ##################################### #
 
@@ -104,7 +105,8 @@ LR_y = min(LR_y_list)
 print("\nCorner coordinates of the area covered by the 4 tiles: \n UL(",UL_x,",",UL_y,") and LR(",LR_x,",",LR_y,")")
 
 
-# SORT TILE FILE RASTERS BY TILE
+# SORT TILE RASTER PATHS BY TILE
+# create list of file paths per tile
 tileName_list = [tileName1,tileName2,tileName3,tileName4]   # list of strings identifying each tile
 tiles_sorted = []
 for tileName in tileName_list:
@@ -112,10 +114,10 @@ for tileName in tileName_list:
     for file_path in file_path_list_bsq_tif:
         if tileName in file_path:                           # look for identifying string in tileName list
             tiles_sorted_inner.append(file_path)            # list of file paths containing the respective string
-    tiles_sorted.append(tiles_sorted_inner)                 # list file paths per tile
+    tiles_sorted.append(tiles_sorted_inner)                 # lists file paths per tile
 
 
-# LOAD RASTER AND GET TRANSFORMATION RULES
+# LOAD RASTERS AND GET TRANSFORMATION RULES
 # VCF raster
 vcf = gdal.Open(path_VCF)           # read VFC raster
 vcf_pr = vcf.GetProjection()        # get projection from raster
@@ -158,47 +160,46 @@ while len(c0020) < 1 or len(c2140) < 1 or len(c4160) < 1 or len(c6180) < 1 or le
     pnt = ogr.Geometry(ogr.wkbPoint)  # create point class object Point
     pnt.AddPoint(x_random, y_random)  # add point coordinate
 
-    # only use tile rasters where Point is located
-    #for i in range(len(UL_y_list)-1):
-    #    if UL_y_list[i] > y_random > UL_y_list[i+1]:
-    #        print("This point is within the tile.", i)
-    #    else:
-    #        print("Point is not within this tile.", i)
+    # prepare for tile raster value extraction from the respective tile rasters
+    tileBand_values = []    # prepare list for tile band values per point
+    tileID = 0              # to track progress
+    rasterID = 0            # to track progress
 
+    # identify in which tile the random point is located --> faster, as it skips unnecessary rasters
+    for tile in tiles_sorted: # lists file paths per tile
+        tile_UL_x_list, tile_UL_y_list, tile_LR_x_list, tile_LR_y_list = GetCoordinates(tile)
+        if tile_UL_y_list[0] > y_random > tile_LR_y_list[0]:
+            print("\nPoint located in tile #", tileID, "(tiles 0, 1, 2, 3)!")
 
-    # extract band values of all tile rasters at Point location
-    tileBand_values = []                        # prepare list for tile band values per point
-    rasterID = 0                                # to track progress
-    for tile_ras in file_path_list_bsq_tif:     # go through all tile rasters
-        #if UL_y_list[rasterID] > y_random > UL_y_list[rasterID+1]: # only consider rasters where Point is located
-        ras = gdal.Open(tile_ras)               # read tile raster
-        #print("\nRaster: ", tile_ras)
-        tile_gt = ras.GetGeoTransform()         # get projection and transformation
-        tile_px = int((x_random - tile_gt[0]) / tile_gt[1]) # calculate absolute raster coordinates
-        tile_py = int((y_random - tile_gt[3]) / tile_gt[5]) # calculate absolute raster coordinates
-        rb_count = ras.RasterCount              # get number of raster bands in raster
-        # extract value for band
-        for i in (range(1,rb_count+1)):
-            rb = ras.GetRasterBand(i)
-            struc_tile_var = rb.ReadRaster(tile_px, tile_py, 1, 1)
-            if struc_tile_var is None:
-                tile_value = struc_tile_var
-            else:
-                if ".tif" in tile_ras:          # value extraction for tif files
-                    tile_val = struct.unpack('f', struc_tile_var) # [f=float size 4]
-                else:                           # value extraction for bsq files
-                    tile_val = struct.unpack('H', struc_tile_var) # [H=unsigned short integer]
-                tile_value = tile_val[0]
-            # store band value in list unless the tile raster is not covering point (None)
-            if tile_value != None:
-                tileBand_values.append(tile_value)
+            # extract band values of respective tile rasters at Point location
+            for tile_file_path in tiles_sorted[tileID]:     # go through respective tile rasters
+                ras = gdal.Open(tile_file_path)             # read tile raster
+                tile_gt = ras.GetGeoTransform()         # get projection and transformation
+                tile_px = int((x_random - tile_gt[0]) / tile_gt[1]) # calculate absolute raster coordinates
+                tile_py = int((y_random - tile_gt[3]) / tile_gt[5]) # calculate absolute raster coordinates
+                rb_count = ras.RasterCount              # get number of raster bands in raster
 
-            # console output to keep track
-            print("Random Point #", ID, "    Raster #", rasterID,"    Number of bands: ", rb_count, "    Band", i,"    Extracted value: ", tile_value)
-        #else:
-        #    print("Random Point #", ID, "Raster #", rasterID, "The random point is outside of this raster!")
+                # extract value for band
+                for i in (range(1,rb_count+1)):
+                    rb = ras.GetRasterBand(i)
+                    struc_tile_var = rb.ReadRaster(tile_px, tile_py, 1, 1)
+                    if struc_tile_var is None:
+                        tile_value = struc_tile_var
+                    else:
+                        if ".tif" in tile_file_path:                        # value extraction for tif files
+                            tile_val = struct.unpack('f', struc_tile_var)   # [f=float size 4]
+                        else:                                               # value extraction for bsq files
+                            tile_val = struct.unpack('H', struc_tile_var)   # [H=unsigned short integer]
+                        tile_value = tile_val[0]
 
-        rasterID += 1
+                    # store band value in list
+                    tileBand_values.append(tile_value)
+
+                    # console output to keep track
+                    print("Tile #", tileID, "    Random Point #", ID, "    Raster #", rasterID,"    Number of bands: ", rb_count, "    Band", i,"    Extracted value: ", tile_value)
+
+                rasterID += 1
+        tileID += 1
 
     # assign spatial reference system from VFC raster to Point geometry
     coord_cl = pnt.Clone()                      # clone sample geometry
@@ -224,23 +225,23 @@ while len(c0020) < 1 or len(c2140) < 1 or len(c4160) < 1 or len(c6180) < 1 or le
     if vcf_value <= 20 and len(c0020) < 1:   # 0-20% stratum
         c0020.append(vcf_value)              # assign point to stratum
         #stratum = 1                         # FOR TESTING: give class number for preview in dataframe
-        storePoint(pnt,UID)
+        pnt_df, UID = storePoint(pnt,UID)
     elif vcf_value <= 40 and len(c2140) < 1: # 21-40% stratum
         c2140.append(vcf_value)
         #stratum = 2
-        storePoint(pnt, UID)
+        pnt_df, UID = storePoint(pnt, UID)
     elif vcf_value <= 60 and len(c4160) < 1: # 41-60% stratum
         c4160.append(vcf_value)
         #stratum = 3
-        storePoint(pnt, UID)
+        pnt_df, UID = storePoint(pnt, UID)
     elif vcf_value <= 80 and len(c6180) < 1: # 61-80% stratum
         c6180.append(vcf_value)
         #stratum = 4
-        storePoint(pnt, UID)
+        pnt_df, UID = storePoint(pnt, UID)
     elif vcf_value <= 100 and len(c80100) < 1: # 81-100% stratum
         c80100.append(vcf_value)
         #stratum = 5
-        storePoint(pnt, UID)
+        pnt_df, UID = storePoint(pnt, UID)
 
     # console output to keep track
     print("\nTotal Points:",len(pnt_list), "\nc0020:", len(c0020),"\nc2140:", len(c2140),"\nc4160:", len(c4160),"\nc6180:", len(c6180),"\nc80100:", len(c80100),"\n")
