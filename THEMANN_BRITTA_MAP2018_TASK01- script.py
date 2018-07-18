@@ -151,7 +151,7 @@ target_vector = []  # y
 
 
 # RANDOM POINT GENERATION AND STORAGE
-while len(c0020) < 10 or len(c2140) < 10 or len(c4160) < 10 or len(c6180) < 10 or len(c80100) < 10:
+while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 100 or len(c80100) < 100:
     # generate random points
     x_random = random.choice(np.arange(UL_x, LR_x, 30)) # generate random x coordinate from range of x values
     y_random = random.choice(np.arange(LR_y, UL_y, 30)) # generate random y coordinate from range of y values
@@ -175,7 +175,8 @@ while len(c0020) < 10 or len(c2140) < 10 or len(c4160) < 10 or len(c6180) < 10 o
     # extract band values of all tile rasters at Point location
     #for tile_file_path in tiles_sorted[tileID]:  # go through respective tile rasters
     for file_path in file_path_list_bsq_tif:     # go through all tile rasters
-        ras = gdal.Open(file_path)             # read tile raster
+        #ras = gdal.Open(tile_file_path)             # read tile raster
+        ras = gdal.Open(file_path)  # read tile raster
         tile_gt = ras.GetGeoTransform()         # get projection and transformation
         tile_px = int((x_random - tile_gt[0]) / tile_gt[1]) # calculate absolute raster coordinates
         tile_py = int((y_random - tile_gt[3]) / tile_gt[5]) # calculate absolute raster coordinates
@@ -204,7 +205,7 @@ while len(c0020) < 10 or len(c2140) < 10 or len(c4160) < 10 or len(c6180) < 10 o
             print("Random Point #",ID, "    Raster #",rasterID,"    Number of bands: ",rb_count, "    Band",i,"    Extracted value: ",tile_value)
 
         rasterID += 1
-    #tileID += 1
+#tileID += 1
 
     # assign spatial reference system from VFC raster to Point geometry
     coord_cl = pnt.Clone()                      # clone sample geometry
@@ -227,23 +228,23 @@ while len(c0020) < 10 or len(c2140) < 10 or len(c4160) < 10 or len(c6180) < 10 o
         vcf_value = vcf_val[0]
 
     # write points into point list if the respective stratum is not complete yet
-    if vcf_value <= 20 and len(c0020) < 10:   # 0-20% stratum
+    if vcf_value <= 20 and len(c0020) < 100:   # 0-20% stratum
         c0020.append(vcf_value)              # assign point to stratum
         #stratum = 1                         # FOR TESTING: give class number for preview in dataframe
         pnt_df, UID = storePoint(pnt,UID)
-    elif vcf_value <= 40 and len(c2140) < 10: # 21-40% stratum
+    elif vcf_value <= 40 and len(c2140) < 100: # 21-40% stratum
         c2140.append(vcf_value)
         #stratum = 2
         pnt_df, UID = storePoint(pnt, UID)
-    elif vcf_value <= 60 and len(c4160) < 10: # 41-60% stratum
+    elif vcf_value <= 60 and len(c4160) < 100: # 41-60% stratum
         c4160.append(vcf_value)
         #stratum = 3
         pnt_df, UID = storePoint(pnt, UID)
-    elif vcf_value <= 80 and len(c6180) < 10: # 61-80% stratum
+    elif vcf_value <= 80 and len(c6180) < 100: # 61-80% stratum
         c6180.append(vcf_value)
         #stratum = 4
         pnt_df, UID = storePoint(pnt, UID)
-    elif vcf_value <= 100 and len(c80100) < 10: # 81-100% stratum
+    elif vcf_value <= 100 and len(c80100) < 100: # 81-100% stratum
         c80100.append(vcf_value)
         #stratum = 5
         pnt_df, UID = storePoint(pnt, UID)
