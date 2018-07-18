@@ -19,6 +19,7 @@ print("Starting process, time: " + starttime)
 print("")
 
 # ####################################### FUNCTIONS ########################################################### #
+# TO BE PLACED IN PACKAGE
 
 #GetCoordinates --> get coordinates for multiple tif files
     # input: list of paths to input files --> file_path_list
@@ -46,6 +47,18 @@ def GetCoordinates(file_path_list):
         counter += 1
     return UL_x_list, UL_y_list, LR_x_list, LR_y_list
 
+# FUNCTIONS SPECIFIC TO THIS SCRIPT (to keep script short)
+
+#storePoint --> store values extracted at random points in pandas dataframe
+    # input1: OGR point geometry --> pnt
+    # input2: unique id to label the point in list--> UID
+def storePoint(pnt,UID):
+    pnt_list.append(pnt)  # append point to point list
+    feature_matrix.append(tileBand_values)  # append tile band values to feature matrix list
+    target_vector.append(vcf_value)  # append vcf value to target vector list
+    pnt_df.loc[len(pnt_df) + 1] = [UID, x, y, vcf_value]  # prepare data frame for shapefile # FOR TESTING ADD: , stratum])
+    UID += 1  # count up unique ID only when point has been added
+
 # ####################################### FOLDER PATHS & GLOBAL VARIABLES ##################################### #
 
 rootFolder = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/MAP/Geoprocessing-in-python_MAP2018_data/Task01_data/"
@@ -54,8 +67,12 @@ L8_doy = rootFolder + "2015_L8_doy015/"
 L8_met = rootFolder + "2015_L8_metrics/"
 S1_met_VH = rootFolder + "2015_S1_metrics/VH_mean/"
 S1_met_VV = rootFolder + "2015_S1_metrics/VV_mean/"
-
 path_VCF = rootFolder + "2000_VCF/20S_070W.tif"
+
+tileName1 = "Tile_x18999_y38999"
+tileName2 = "Tile_x18999_y39999"
+tileName3 = "Tile_x18999_y40999"
+tileName4 = "Tile_x18999_y41999"
 
 # ####################################### PROCESSING ########################################################## #
 
@@ -80,11 +97,22 @@ for file in file_path_list_tiles:
 # identify UL and LR corner coordinates of the area covered by the 4 tiles
 #print("\nExtracting corner coordinates of the 4 tiles:")
 UL_x_list, UL_y_list, LR_x_list, LR_y_list = GetCoordinates(file_path_list_bsq_tif)
-UL_x = min(UL_x_list)
+UL_x = min(UL_x_list) # identical for each tile, since vertically aligned
 UL_y = max(UL_y_list)
-LR_x = max(LR_x_list)
+LR_x = max(LR_x_list) # identical for each tile, since vertically aligned
 LR_y = min(LR_y_list)
 print("\nCorner coordinates of the area covered by the 4 tiles: \n UL(",UL_x,",",UL_y,") and LR(",LR_x,",",LR_y,")")
+
+
+# SORT TILE FILE RASTERS BY TILE
+tileName_list = [tileName1,tileName2,tileName3,tileName4]   # list of strings identifying each tile
+tiles_sorted = []
+for tileName in tileName_list:
+    tiles_sorted_inner = []
+    for file_path in file_path_list_bsq_tif:
+        if tileName in file_path:                           # look for identifying string in tileName list
+            tiles_sorted_inner.append(file_path)            # list of file paths containing the respective string
+    tiles_sorted.append(tiles_sorted_inner)                 # list file paths per tile
 
 
 # LOAD RASTER AND GET TRANSFORMATION RULES
@@ -121,7 +149,7 @@ target_vector = []  # y
 
 
 # RANDOM POINT GENERATION AND STORAGE
-while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 100 or len(c80100) < 100:
+while len(c0020) < 1 or len(c2140) < 1 or len(c4160) < 1 or len(c6180) < 1 or len(c80100) < 1:
     # generate random points
     x_random = random.choice(np.arange(UL_x, LR_x, 30)) # generate random x coordinate from range of x values
     y_random = random.choice(np.arange(LR_y, UL_y, 30)) # generate random y coordinate from range of y values
@@ -193,46 +221,26 @@ while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 1
         vcf_value = vcf_val[0]
 
     # write points into point list if the respective stratum is not complete yet
-    if vcf_value <= 20 and len(c0020) < 100:    # 0-20% stratum
-        c0020.append(vcf_value)                 # assign point to stratum
-        #stratum = 1                            # FOR TESTING: give class number for preview in dataframe
-        pnt_list.append(pnt)                    # append point to point list
-        feature_matrix.append(tileBand_values)  # append tile band values to feature matrix list
-        target_vector.append(vcf_value)         # append vcf value to target vector list
-        pnt_df.loc[len(pnt_df) + 1] = [UID, x, y, vcf_value] # prepare data frame for shapefile # FOR TESTING ADD: , stratum])
-        UID += 1                            # count up unique ID only when point has been added
-    elif vcf_value <= 40 and len(c2140) < 100: # 21-40% stratum
+    if vcf_value <= 20 and len(c0020) < 1:   # 0-20% stratum
+        c0020.append(vcf_value)              # assign point to stratum
+        #stratum = 1                         # FOR TESTING: give class number for preview in dataframe
+        storePoint(pnt,UID)
+    elif vcf_value <= 40 and len(c2140) < 1: # 21-40% stratum
         c2140.append(vcf_value)
         #stratum = 2
-        pnt_list.append(pnt)
-        feature_matrix.append(tileBand_values)
-        target_vector.append(vcf_value)
-        pnt_df.loc[len(pnt_df) + 1] = [UID, x, y, vcf_value] # FOR TESTING ADD: , stratum])
-        UID += 1
-    elif vcf_value <= 60 and len(c4160) < 100: # 41-60% stratum
+        storePoint(pnt, UID)
+    elif vcf_value <= 60 and len(c4160) < 1: # 41-60% stratum
         c4160.append(vcf_value)
         #stratum = 3
-        pnt_list.append(pnt)
-        feature_matrix.append(tileBand_values)
-        target_vector.append(vcf_value)
-        pnt_df.loc[len(pnt_df) + 1] = [UID, x, y, vcf_value] # FOR TESTING ADD: , stratum])
-        UID += 1
-    elif vcf_value <= 80 and len(c6180) < 100: # 61-80% stratum
+        storePoint(pnt, UID)
+    elif vcf_value <= 80 and len(c6180) < 1: # 61-80% stratum
         c6180.append(vcf_value)
         #stratum = 4
-        pnt_list.append(pnt)
-        feature_matrix.append(tileBand_values)
-        target_vector.append(vcf_value)
-        pnt_df.loc[len(pnt_df) + 1] = [UID, x, y, vcf_value] # FOR TESTING ADD: , stratum])
-        UID += 1
-    elif vcf_value <= 100 and len(c80100) < 100: # 81-100% stratum
+        storePoint(pnt, UID)
+    elif vcf_value <= 100 and len(c80100) < 1: # 81-100% stratum
         c80100.append(vcf_value)
         #stratum = 5
-        pnt_list.append(pnt)
-        feature_matrix.append(tileBand_values)
-        target_vector.append(vcf_value)
-        pnt_df.loc[len(pnt_df) + 1] = [UID, x, y, vcf_value] # FOR TESTING ADD: , stratum])
-        UID += 1
+        storePoint(pnt, UID)
 
     # console output to keep track
     print("\nTotal Points:",len(pnt_list), "\nc0020:", len(c0020),"\nc2140:", len(c2140),"\nc4160:", len(c4160),"\nc6180:", len(c6180),"\nc80100:", len(c80100),"\n")
@@ -256,18 +264,16 @@ shp_df.to_file('THEMANN_BRITTA_MAP-task01_randomPoints.shp', driver='ESRI Shapef
 
 # STORE RANDOM POINTS WITH RASTER VALUES IN ARRAYS
 # Feature Matrix (x) --> classes
-arr_fm = np.asarray(feature_matrix)                 # create arraay
-print("\nFeature Matrix (x) shape: ",arr_fm.shape)  #(500,68) --> 500 rows and 68 columns
-outName = "SURNAME_NAME_MAP-task01_np-array_x-values.npy"   # output file name
-np.save(outName, arr_fm)                                    # save array
-#print(arr_fm)
+arr_fm = np.asarray(feature_matrix)                                 # create arraay
+print("\nFeature Matrix (x) shape: ",arr_fm.shape)                  #(500,68) --> 500 rows and 68 columns
+np.save("SURNAME_NAME_MAP-task01_np-array_x-values.npy", arr_fm)    # save array
+print(arr_fm)
 
 # Target Vector (y) --> classes
 arr_tv = np.asarray(target_vector)
-print("\nTarget vector (y) shape:", arr_tv.shape) #(500,) --> 500 rows and 1 column
-outName = "THEMANN_BRITTA_MAP-task01_np-array_y-values.npy"
-np.save(outName, arr_tv)
-#print(arr_tv)
+print("\nTarget vector (y) shape:", arr_tv.shape)                   #(500,) --> 500 rows and 1 column
+np.save("THEMANN_BRITTA_MAP-task01_np-array_y-values.npy", arr_tv)
+print(arr_tv)
 
 # SURNAME_NAME_MAP-task01_np-array_x-values.npy
 # SURNAME_NAME_MAP-task01_np-array_y-values.npy
