@@ -9,7 +9,6 @@ import geopandas as gpd
 from shapely.geometry import Point
 import struct
 import random
-import sys
 
 # ####################################### SET TIME-COUNT ###################################################### #
 
@@ -53,11 +52,11 @@ def GetCoordinates(file_path_list):
     # input1: OGR point geometry --> pnt
     # input2: unique id to label the point in list--> UID
 def storePoint(pnt,UID):
-    pnt_list.append(pnt)  # append point to point list
-    feature_matrix.append(tileBand_values)  # append tile band values to feature matrix list
-    target_vector.append(vcf_value)  # append vcf value to target vector list
-    pnt_df.loc[len(pnt_df) + 1] = [UID, x, y, vcf_value]  # prepare data frame for shapefile # FOR TESTING ADD: , stratum])
-    UID += 1  # count up unique ID only when point has been added
+    pnt_list.append(pnt)                                    # append point to point list
+    feature_matrix.append(tileBand_values)                  # append tile band values to feature matrix list
+    target_vector.append(vcf_value)                         # append vcf value to target vector list
+    pnt_df.loc[len(pnt_df) + 1] = [UID, x, y, vcf_value]    # prepare data frame for shapefile
+    UID += 1                                                # count up unique ID only when point has been added
     return pnt_df, UID
 
 # ####################################### FOLDER PATHS & GLOBAL VARIABLES ##################################### #
@@ -150,7 +149,7 @@ feature_matrix = [] # x
 target_vector = []  # y
 
 
-# RANDOM POINT GENERATION AND STORAGE
+# RANDOM POINT GENERATION AND STORAGE AND INFORMATION EXTRACTION
 while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 100 or len(c80100) < 100:
     # generate random points
     x_random = random.choice(np.arange(UL_x, LR_x, 30)) # generate random x coordinate from range of x values
@@ -162,50 +161,44 @@ while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 1
 
     # prepare for tile raster value extraction from the respective tile rasters
     tileBand_values = []    # prepare list for tile band values per point
-    #tileID = 0              # to track progress
+    tileID = 0              # to track progress
     rasterID = 0            # to track progress
 
-    # identify in which tile the random point is located --> faster, as it skips unnecessary rasters
-    #for tile in tiles_sorted: # lists file paths per tile
-        #tile_UL_x_list, tile_UL_y_list, tile_LR_x_list, tile_LR_y_list = GetCoordinates(tile)
-        #if tile_UL_y_list[0] > y_random > tile_LR_y_list[0]:
-            #print("\nPoint located in tile #", tileID, "(tiles 0, 1, 2, 3)!")
+    # identify in which tile the random point is located to skip raster files which do not cover point location
+    for tile in tiles_sorted: # lists file paths per tile
+        tile_UL_x_list, tile_UL_y_list, tile_LR_x_list, tile_LR_y_list = GetCoordinates(tile)
+        if tile_UL_y_list[0] > y_random > tile_LR_y_list[0]:
+            print("\nPoint located in tile #", tileID, "(tiles 0, 1, 2, 3)!")
 
-    # extract band values of respective tile rasters at Point location
-    # extract band values of all tile rasters at Point location
-    #for tile_file_path in tiles_sorted[tileID]:  # go through respective tile rasters
-    for file_path in file_path_list_bsq_tif:     # go through all tile rasters
-        #ras = gdal.Open(tile_file_path)             # read tile raster
-        ras = gdal.Open(file_path)  # read tile raster
-        tile_gt = ras.GetGeoTransform()         # get projection and transformation
-        tile_px = int((x_random - tile_gt[0]) / tile_gt[1]) # calculate absolute raster coordinates
-        tile_py = int((y_random - tile_gt[3]) / tile_gt[5]) # calculate absolute raster coordinates
-        rb_count = ras.RasterCount              # get number of raster bands in raster
+            # extract band values of respective tile rasters at Point location
+            for tile_file_path in tiles_sorted[tileID]:             # go through respective tile rasters
+                ras = gdal.Open(tile_file_path)                     # read tile raster
+                tile_gt = ras.GetGeoTransform()                     # get projection and transformation
+                tile_px = int((x_random - tile_gt[0]) / tile_gt[1]) # calculate absolute raster coordinates
+                tile_py = int((y_random - tile_gt[3]) / tile_gt[5]) # calculate absolute raster coordinates
+                rb_count = ras.RasterCount                          # get number of raster bands in raster
 
-        # extract value for band
-        for i in (range(1,rb_count+1)):
-            rb = ras.GetRasterBand(i)
-            struc_tile_var = rb.ReadRaster(tile_px, tile_py, 1, 1)
-            if struc_tile_var is None:
-                tile_value = struc_tile_var
-            else:
-                #if ".tif" in tile_file_path:  # value extraction for tif files
-                if ".tif" in file_path:                        # value extraction for tif files
-                    tile_val = struct.unpack('f', struc_tile_var)   # [f=float size 4]
-                else:                                               # value extraction for bsq files
-                    tile_val = struct.unpack('H', struc_tile_var)   # [H=unsigned short integer]
-                tile_value = tile_val[0]
+                # extract value for band
+                for i in (range(1,rb_count+1)):
+                    rb = ras.GetRasterBand(i)
+                    struc_tile_var = rb.ReadRaster(tile_px, tile_py, 1, 1)
+                    if struc_tile_var is None:
+                        tile_value = struc_tile_var
+                    else:
+                        if ".tif" in tile_file_path:                        # value extraction for tif files
+                            tile_val = struct.unpack('f', struc_tile_var)   # [f=float size 4]
+                        else:                                               # value extraction for bsq files
+                            tile_val = struct.unpack('H', struc_tile_var)   # [H=unsigned short integer]
+                        tile_value = tile_val[0]
 
-            # store band value in list
-            if tile_value != None:
-                tileBand_values.append(tile_value)
+                    # store band value in list
+                    tileBand_values.append(tile_value)
 
-            # console output to keep track
-            #print("Tile #",tileID, "    Random Point #",ID, "    Raster #",rasterID, "    Number of bands: ",rb_count, "    Band",i, "    Extracted value: ",tile_value)
-            print("Random Point #",ID, "    Raster #",rasterID,"    Number of bands: ",rb_count, "    Band",i,"    Extracted value: ",tile_value)
+                    # console output to keep track
+                    print("Tile #",tileID, "    Random Point #",ID, "    Raster #",rasterID, "    Number of bands: ",rb_count, "    Band",i, "    Extracted value: ",tile_value)
 
-        rasterID += 1
-#tileID += 1
+                rasterID += 1   # to track progress
+        tileID += 1             # to track progress
 
     # assign spatial reference system from VFC raster to Point geometry
     coord_cl = pnt.Clone()                      # clone sample geometry
@@ -228,31 +221,26 @@ while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 1
         vcf_value = vcf_val[0]
 
     # write points into point list if the respective stratum is not complete yet
-    if vcf_value <= 20 and len(c0020) < 100:   # 0-20% stratum
-        c0020.append(vcf_value)              # assign point to stratum
-        #stratum = 1                         # FOR TESTING: give class number for preview in dataframe
+    if vcf_value <= 20 and len(c0020) < 100:    # 0-20% stratum
+        c0020.append(vcf_value)                 # assign point to stratum
         pnt_df, UID = storePoint(pnt,UID)
-    elif vcf_value <= 40 and len(c2140) < 100: # 21-40% stratum
+    elif vcf_value <= 40 and len(c2140) < 100:  # 21-40% stratum
         c2140.append(vcf_value)
-        #stratum = 2
         pnt_df, UID = storePoint(pnt, UID)
-    elif vcf_value <= 60 and len(c4160) < 100: # 41-60% stratum
+    elif vcf_value <= 60 and len(c4160) < 100:  # 41-60% stratum
         c4160.append(vcf_value)
-        #stratum = 3
         pnt_df, UID = storePoint(pnt, UID)
-    elif vcf_value <= 80 and len(c6180) < 100: # 61-80% stratum
+    elif vcf_value <= 80 and len(c6180) < 100:  # 61-80% stratum
         c6180.append(vcf_value)
-        #stratum = 4
         pnt_df, UID = storePoint(pnt, UID)
-    elif vcf_value <= 100 and len(c80100) < 100: # 81-100% stratum
+    elif vcf_value <= 100 and len(c80100) < 100:# 81-100% stratum
         c80100.append(vcf_value)
-        #stratum = 5
         pnt_df, UID = storePoint(pnt, UID)
 
     # console output to keep track
     print("\nTotal Points:",len(pnt_list), "\nc0020:", len(c0020),"\nc2140:", len(c2140),"\nc4160:", len(c4160),"\nc6180:", len(c6180),"\nc80100:", len(c80100),"\n")
 
-    ID += 1 # to keep track of random points tested for the stratum conditions
+    ID += 1 # to track progress (random points tested for the stratum conditions)
 
 
 # CHECK RESULT
@@ -282,8 +270,6 @@ print("\nTarget vector (y) shape:", arr_tv.shape)                   #(500,) --> 
 np.save("THEMANN_BRITTA_MAP-task01_np-array_y-values.npy", arr_tv)
 print(arr_tv)
 
-# SURNAME_NAME_MAP-task01_np-array_x-values.npy
-# SURNAME_NAME_MAP-task01_np-array_y-values.npy
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
 
 print("")
