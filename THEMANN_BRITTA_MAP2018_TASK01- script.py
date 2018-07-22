@@ -20,7 +20,7 @@ print("")
 # ####################################### FUNCTIONS ########################################################### #
 # TO BE PLACED IN PACKAGE
 
-#GetCoordinates --> get coordinates for multiple tif files
+#GetCoordinates --> get coordinates for multiple raster files
     # input: list of paths to input files --> file_path_list
     # UL --> Upper Left corner
     # LR --> Lower Right corner
@@ -79,19 +79,9 @@ tileName4 = "Tile_x18999_y41999"
 # IDENTIFY EXTENT OF THE AREA COVERED BY THE 4 TILE
 # write the file names containing ".bsq" or "tif" of each tile into a file path list
 folder_list = [L8_doy, L8_met,S1_met_VH,S1_met_VV]
-file_path_list_tiles = []
-for folder in folder_list:
-    file_list = os.listdir(folder)
-    for file in file_list:
-        file_path = folder + file
-        file_path_list_tiles.append(file_path)
+file_path_list_tiles = [folder + file for folder in folder_list for file in os.listdir(folder)]
 #print("All files in folder: \n",file_path_list_tiles,"\n")
-file_path_list_bsq_tif = []
-for file in file_path_list_tiles:
-    if "bsq" in file:
-        file_path_list_bsq_tif.append(file)
-    if "tif" in file:
-        file_path_list_bsq_tif.append(file)
+file_path_list_bsq_tif = [file for file in file_path_list_tiles if "bsq" in file or "tif" in file]
 #print("Only bsq files in folder: \n",file_path_list_bsq_tif,"\n")
 
 # identify UL and LR corner coordinates of the area covered by the 4 tiles
@@ -107,13 +97,9 @@ print("\nCorner coordinates of the area covered by the 4 tiles: \n UL(",UL_x,","
 # SORT TILE RASTER PATHS BY TILE
 # create list of file paths per tile
 tileName_list = [tileName1,tileName2,tileName3,tileName4]   # list of strings identifying each tile
-tiles_sorted = []
-for tileName in tileName_list:
-    tiles_sorted_inner = []
-    for file_path in file_path_list_bsq_tif:
-        if tileName in file_path:                           # look for identifying string in tileName list
-            tiles_sorted_inner.append(file_path)            # list of file paths containing the respective string
-    tiles_sorted.append(tiles_sorted_inner)                 # lists file paths per tile
+tiles_sorted = [[file_path for file_path in file_path_list_bsq_tif if tileName in file_path] for tileName in tileName_list]
+                #| nested list of file paths containing the respective identifying string   |
+                #|                              list of file paths per tile                                               |
 
 
 # LOAD RASTERS AND GET TRANSFORMATION RULES
@@ -136,8 +122,10 @@ coordTrans = osr.CoordinateTransformation(source_SR, target_SR)# transformation 
 # point id (each point) and unique point id (only stored point)
 ID = 0
 UID = 0
+
 # random points data frame preparation
-pnt_df = pd.DataFrame(columns=["UID", "X_COORD", "Y_COORD", "VCF"]) # FOR TESTING ADD: , "stratum"])
+pnt_df = pd.DataFrame(columns=["UID", "X_COORD", "Y_COORD", "VCF"])
+
 # create lists to store point information in
 pnt_list = []   # all stored points
 c0020 = []      # 0-20% stratum
@@ -165,7 +153,7 @@ while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 1
     rasterID = 0            # to track progress
 
     # identify in which tile the random point is located to skip raster files which do not cover point location
-    for tile in tiles_sorted: # lists file paths per tile
+    for tile in tiles_sorted:                                       # go through file paths per tile
         tile_UL_x_list, tile_UL_y_list, tile_LR_x_list, tile_LR_y_list = GetCoordinates(tile)
         if tile_UL_y_list[0] > y_random > tile_LR_y_list[0]:
             print("\nPoint located in tile #", tileID, "(tiles 0, 1, 2, 3)!")
@@ -195,7 +183,7 @@ while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 1
                     tileBand_values.append(tile_value)
 
                     # console output to keep track
-                    print("Tile #",tileID, "    Random Point #",ID, "    Raster #",rasterID, "    Number of bands: ",rb_count, "    Band",i, "    Extracted value: ",tile_value)
+                    print("Tile #",tileID, "   Random Point #",ID, "   Raster #",rasterID, "   Number of bands: ",rb_count, "   Band",i, "   Extracted value: ",tile_value)
 
                 rasterID += 1   # to track progress
         tileID += 1             # to track progress
@@ -242,8 +230,7 @@ while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 1
 
     ID += 1 # to track progress (random points tested for the stratum conditions)
 
-
-# CHECK RESULT
+# check result
 #print("\nPoint list: \n",pnt_list)
 #print("\nNumber of random points: ",len(pnt_list))
 
