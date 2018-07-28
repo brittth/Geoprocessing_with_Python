@@ -5,6 +5,7 @@ import os
 from osgeo import gdal, ogr, osr
 import numpy as np
 import struct
+import geopandas as gpd
 
 # ####################################### SET TIME-COUNT ###################################################### #
 
@@ -70,23 +71,44 @@ dataset = dict(zip(keys, values))
 #print(dataset)
 
 # PREPARE COUNTRY LIST FOR DATA AGGREGATION
-polygons = []
-for polygon in countries_lyr:
-    polygons.append(polygon.GetField('Name_0'))
-print(polygons)
-countries = set(polygons)
-print(countries)
+#countries_copy = ogr.Open(rootFolder + "ZonalShape_Countries_Europe_NUTS1_multipart.shp", 1)
+#countries_lyr_copy = countries_copy.GetLayer()
+country_list = list(set([polygon.GetField('NAME_0') for polygon in countries_lyr]))
+print("Country list: \n",country_list,"\n")
 
-#for polygon in countries_lyr:
-#    print(polygon.GetField('Name_0'))
-#    print(polygon.GetField('area_km2'))
+for country in country_list:
+    countries_lyr.ResetReading() # before each use of loop on country_lyr
+    for poly in countries_lyr:
+        #print("COUNTRY: ",country,"\nPOLY: ",poly.GetField('NAME_0'))
+        if poly.GetField('NAME_0')== country:
+            print("yay")
+        else:
+            print("buhu")
 
+'''
+multi = ogr.Geometry(ogr.wkbMultiPolygon)
+for g in countries_lyr:
+    #geom = g.GetGeometryRef()
+    multi.AddGeometry(g.geometry())
+    print(multi.UnionCascaded())
+
+
+world = gpd.read_file(rootFolder + countries)
+world = world[['NAME_0', 'area_km2']]
+continents = world.dissolve(by='NAME_0')
 #GEOPANDAS EXAMPLE
 #world = geopandas.read_file(geopandas.datasets.get_path('naturalearth_lowres'))
 #world = world[['country', 'geometry']]
 #continents = world.dissolve(by='Name_0')
 #continents.plot();
 #continents.head()
+
+for polygon in countries_lyr:
+    print(polygon.GetField('area_km2'))
+    area_km2_list = [polygon.GetField('area_km2')]
+    area_km2 = sum(area_km2_list)
+    dataset['area_km2'].append(area_km2)
+'''
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
 
 print("")
