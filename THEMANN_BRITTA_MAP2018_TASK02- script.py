@@ -6,6 +6,7 @@ from osgeo import gdal, ogr, osr
 import numpy as np
 import struct
 import geopandas as gpd
+import pandas as pd
 
 # ####################################### SET TIME-COUNT ###################################################### #
 
@@ -54,8 +55,8 @@ if str(countries_sr) == str(roads_sr) == str(dams_sr):  #only works with str in 
     print("All files share the same spatial reference. No transformation needed!\n")
 else:
     print("NOT all files share the same spatial reference. Transformation needed!\n")
-dams_trans = osr.CoordinateTransformation(dams_sr, countries_sr)    # transformation rule: dams --> countries
-roads_trans = osr.CoordinateTransformation(roads_sr, countries_sr)  # transformation rule: roads --> countries
+#dams_trans = osr.CoordinateTransformation(dams_sr, countries_sr)    # transformation rule: dams --> countries
+#roads_trans = osr.CoordinateTransformation(roads_sr, countries_sr)  # transformation rule: roads --> countries
 
 
 # PREPARE DATA DICTIONARY FOR SUMMARY DATASET
@@ -79,8 +80,9 @@ for country in country_list:
     dataset['country'].append(country)                              # store country name in dataset INFO#1
     area_km2_list = []                                              # prepare for area_km2 data aggregation
     countries_lyr.ResetReading()                                    # before each use of loop on country_lyr
+
     # Check each polygon for the designated country
-    polygon = countries_lyr.GetNextFeature()
+    polygon = countries_lyr.GetNextFeature()                        # loop through features
     while polygon:
         # If designated country is found, extract information
         if polygon.GetField('NAME_0')== country:
@@ -88,26 +90,35 @@ for country in country_list:
             area_km2_list.append(polygon.GetField('area_km2'))      # store area_km2 for data aggregation INFO#2
             #print("Data extraction from polygon shapefile (countries) complete!")
 
-            pointID = 0
-            point= dams_lyr.GetNextFeature()
+            #dams_lyr.ResetReading()                                 # before each use of loop on dams_lyr
+            pointID = 0                                             # for tracking
+            pointID_contains = 0
+            point = dams_lyr.GetNextFeature()                        # loop through features
             while point:
-                print("pointID: ", pointID)
+                print("pointID: ", pointID)                         # for tracking
                 # On-the-fly transformation of point data (dams) to match spatial reference of polygon data (countries)
                 point_geom = point.GetGeometryRef()
                 point_geom_trans = TransformGeometry(point_geom, countries_sr)
+                print(point_geom)
+                print(point_geom_trans)
 
-                polygon_geom = polygon.GetGeometryRef()
+                polygon_geom = polygon.geometry().Clone()
+                #polygon_geom = polygon.GetGeometryRef()  # polygon geometry for later
                 if polygon_geom.Contains(point_geom_trans):
-                    print("Point #",pointID," lies within polygon!")
-                    print(point_geom)
-                    print(point_geom_trans)
+                    print("pointID_contains: ", pointID_contains)                         # for tracking
+                    pointID_contains += 1
+
+
+                #point_geom_trans.SetSpatialFilter(polygon_geom)
+                #nr_dams_poly = point_geom_trans.GetFeatureCount()
+                #print(nr_dams_poly)
+
+                #if polygon_geom.Contains(point_geom_trans):
+                #    print("Point #",pointID," lies within polygon!")
 
                 pointID += 1
                 point = dams_lyr.GetNextFeature()
 
-
-                #point_geom_cl = point_geom.Clone()
-                #point_geom_cl.Transform(dams_trans)
                 #if polygon.Contains(point_geom_cl):
                 #polygon.SetSpatialFilter(point_geom_cl)
                 #count = polygon.GetFeatureCount()
@@ -116,8 +127,8 @@ for country in country_list:
 
 
             # On-the-fly transformation of line data (roads)to match spatial reference of polygon data (countries)
-            # roads_new = TransformGeometry(roads, countries_sr)
-            # print(roads_new.GetSpatialRef())
+            #line_geom = line.GetGeometryRef()
+            #line_geom_trans = TransformGeometry(line_geom, countries_sr)
             polyID += 1                                             # for tracking
         polygon = countries_lyr.GetNextFeature()
 
