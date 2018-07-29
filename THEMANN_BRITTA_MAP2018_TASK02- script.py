@@ -40,27 +40,23 @@ countries = ogr.Open(rootFolder + "ZonalShape_Countries_Europe_NUTS1_multipart.s
 countries_lyr = countries.GetLayer()
 countries_sr = countries_lyr.GetSpatialRef()
 
-roads = ogr.Open(rootFolder + "gRoads-v1-Europe-sub.shp", 1)
-roads_lyr = roads.GetLayer()
-roads_sr = roads_lyr.GetSpatialRef()
-
 dams = ogr.Open(rootFolder + "GRanD_dams_v1_1_Europe-sub.shp", 1)
 dams_lyr = dams.GetLayer()
 dams_sr = dams_lyr.GetSpatialRef()
 
-# CHECK SPATIAL REFERENCE
+roads = ogr.Open(rootFolder + "gRoads-v1-Europe-sub.shp", 1)
+roads_lyr = roads.GetLayer()
+roads_sr = roads_lyr.GetSpatialRef()
+
+
+# CHECK SPATIAL REFERENCE AND CREATE TRANSFORMATION RULES
 if str(countries_sr) == str(roads_sr) == str(dams_sr):  #only works with str in front
     print("All files share the same spatial reference. No transformation needed!\n")
 else:
     print("NOT all files share the same spatial reference. Transformation needed!\n")
+dams_trans = osr.CoordinateTransformation(dams_sr, countries_sr)    # transformation rule: dams --> countries
+roads_trans = osr.CoordinateTransformation(roads_sr, countries_sr)  # transformation rule: roads --> countries
 
-# TRANSFORMATION
-    # transform point (dams) and line (roads) data since faster than transforming polygon (countries) data
-    # set spatial reference of countries layer as target
-#roads_new = TransformGeometry(roads, countries_sr)
-#print(roads_new.GetSpatialRef())
-#dams_new = TransformGeometry(dams, countries_sr)
-#print(dams_new.GetSpatialRef())
 
 # PREPARE DATA DICTIONARY FOR SUMMARY DATASET
 keys = ['country','area_km2','nr_dams','yr_old','name_old','yr_young','name_young','av_reserv_km2',
@@ -70,45 +66,68 @@ values = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
 dataset = dict(zip(keys, values))
 #print(dataset)
 
+
 # PREPARE COUNTRY LIST FOR DATA AGGREGATION
-#countries_copy = ogr.Open(rootFolder + "ZonalShape_Countries_Europe_NUTS1_multipart.shp", 1)
-#countries_lyr_copy = countries_copy.GetLayer()
 country_list = list(set([polygon.GetField('NAME_0') for polygon in countries_lyr]))
 print("Country list: \n",country_list,"\n")
 
+
+# EXTRACT INFORMATION
+# Go through each country
 for country in country_list:
-    countries_lyr.ResetReading() # before each use of loop on country_lyr
-    for poly in countries_lyr:
-        #print("COUNTRY: ",country,"\nPOLY: ",poly.GetField('NAME_0'))
-        if poly.GetField('NAME_0')== country:
-            print("yay")
-        else:
-            print("buhu")
+    polyID = 0                                                      # for tracking
+    dataset['country'].append(country)                              # store country name in dataset INFO#1
+    area_km2_list = []                                              # prepare for area_km2 data aggregation
+    countries_lyr.ResetReading()                                    # before each use of loop on country_lyr
+    # Check each polygon for the designated country
+    polygon = countries_lyr.GetNextFeature()
+    while polygon:
+        # If designated country is found, extract information
+        if polygon.GetField('NAME_0')== country:
+            print("Country : ", country, "   Polygon #", polyID)    # for tracking
+            area_km2_list.append(polygon.GetField('area_km2'))      # store area_km2 for data aggregation INFO#2
+            #print("Data extraction from polygon shapefile (countries) complete!")
 
-'''
-multi = ogr.Geometry(ogr.wkbMultiPolygon)
-for g in countries_lyr:
-    #geom = g.GetGeometryRef()
-    multi.AddGeometry(g.geometry())
-    print(multi.UnionCascaded())
+            pointID = 0
+            point= dams_lyr.GetNextFeature()
+            while point:
+                print("pointID: ", pointID)
+                # On-the-fly transformation of point data (dams) to match spatial reference of polygon data (countries)
+                point_geom = point.GetGeometryRef()
+                point_geom_trans = TransformGeometry(point_geom, countries_sr)
+
+                polygon_geom = polygon.GetGeometryRef()
+                if polygon_geom.Contains(point_geom_trans):
+                    print("Point #",pointID," lies within polygon!")
+                    print(point_geom)
+                    print(point_geom_trans)
+
+                pointID += 1
+                point = dams_lyr.GetNextFeature()
 
 
-world = gpd.read_file(rootFolder + countries)
-world = world[['NAME_0', 'area_km2']]
-continents = world.dissolve(by='NAME_0')
-#GEOPANDAS EXAMPLE
-#world = geopandas.read_file(geopandas.datasets.get_path('naturalearth_lowres'))
-#world = world[['country', 'geometry']]
-#continents = world.dissolve(by='Name_0')
-#continents.plot();
-#continents.head()
+                #point_geom_cl = point_geom.Clone()
+                #point_geom_cl.Transform(dams_trans)
+                #if polygon.Contains(point_geom_cl):
+                #polygon.SetSpatialFilter(point_geom_cl)
+                #count = polygon.GetFeatureCount()
+                #print("nr_dams: ", count)
+                    #print("contains")
 
-for polygon in countries_lyr:
-    print(polygon.GetField('area_km2'))
-    area_km2_list = [polygon.GetField('area_km2')]
-    area_km2 = sum(area_km2_list)
-    dataset['area_km2'].append(area_km2)
-'''
+
+            # On-the-fly transformation of line data (roads)to match spatial reference of polygon data (countries)
+            # roads_new = TransformGeometry(roads, countries_sr)
+            # print(roads_new.GetSpatialRef())
+            polyID += 1                                             # for tracking
+        polygon = countries_lyr.GetNextFeature()
+
+    # Aggregate and store area_km2 per country
+    area_km2 = sum(area_km2_list)                                   # add up area_km2 values for all polygons of one country
+    dataset['area_km2'].append(area_km2)                            # store the area_km2 result in dataset
+
+print(dataset)
+
+
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
 
 print("")
