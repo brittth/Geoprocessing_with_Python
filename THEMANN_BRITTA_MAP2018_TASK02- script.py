@@ -30,14 +30,17 @@ def TransformGeometry(geometry, target_sref):
 
 rootFolder = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/MAP/Geoprocessing-in-python_MAP2018_data/Task02_data/"
 
-countries = "ZonalShape_Countries_Europe_NUTS1_multipart.shp"
-roads = "gRoads-v1-Europe-sub.shp"
-dams = "GRanD_dams_v1_1_Europe-sub.shp"
-
 # ####################################### PROCESSING ########################################################## #
 
 # LOAD DATA FILES
-countries = ogr.Open(rootFolder + "ZonalShape_Countries_Europe_NUTS1_multipart.shp", 1)
+#countries = ogr.Open(rootFolder + "ZonalShape_Countries_Europe_NUTS1_multipart.shp", 1)
+#countries_lyr = countries.GetLayer()
+#countries_sr = countries_lyr.GetSpatialRef()
+
+#ALTERNATIVE, both work
+countries = rootFolder + "ZonalShape_Countries_Europe_NUTS1_multipart.shp"
+driver = ogr.GetDriverByName("ESRI Shapefile")
+countries = driver.Open(countries, 0)
 countries_lyr = countries.GetLayer()
 countries_sr = countries_lyr.GetSpatialRef()
 
@@ -83,30 +86,32 @@ for country in country_list:
 
     # Check each polygon for the designated country
     polygon = countries_lyr.GetNextFeature()                        # loop through features
+    nr_dams = 0
     while polygon:
         # If designated country is found, extract information
         if polygon.GetField('NAME_0')== country:
-            print("Country : ", country, "   Polygon #", polyID)    # for tracking
+            #print("Country : ", country, "   Polygon #", polyID)    # for tracking
             area_km2_list.append(polygon.GetField('area_km2'))      # store area_km2 for data aggregation INFO#2
             #print("Data extraction from polygon shapefile (countries) complete!")
 
-            #dams_lyr.ResetReading()                                 # before each use of loop on dams_lyr
+            polygon_geom = polygon.GetGeometryRef()                 # get geometry of polygon
+            #polygon_geom = polygon.geometry().Clone()
+
+            dams_lyr.ResetReading()                                 # before each use of loop on dams_lyr
             pointID = 0                                             # for tracking
-            pointID_contains = 0
             point = dams_lyr.GetNextFeature()                        # loop through features
             while point:
-                print("pointID: ", pointID)                         # for tracking
+                #print("pointID: ", pointID)                         # for tracking
                 # On-the-fly transformation of point data (dams) to match spatial reference of polygon data (countries)
                 point_geom = point.GetGeometryRef()
                 point_geom_trans = TransformGeometry(point_geom, countries_sr)
-                print(point_geom)
-                print(point_geom_trans)
+                #print(point_geom)
+                #print(point_geom_trans)
 
-                polygon_geom = polygon.geometry().Clone()
-                #polygon_geom = polygon.GetGeometryRef()  # polygon geometry for later
                 if polygon_geom.Contains(point_geom_trans):
-                    print("pointID_contains: ", pointID_contains)                         # for tracking
-                    pointID_contains += 1
+                    nr_dams += 1
+                    print("Country : ", country, "   Polygon #",polyID, "   Dams #", nr_dams)  # for tracking
+
 
 
                 #point_geom_trans.SetSpatialFilter(polygon_geom)
@@ -130,12 +135,15 @@ for country in country_list:
             #line_geom = line.GetGeometryRef()
             #line_geom_trans = TransformGeometry(line_geom, countries_sr)
             polyID += 1                                             # for tracking
+        #print(nr_dams)
         polygon = countries_lyr.GetNextFeature()
+
 
     # Aggregate and store area_km2 per country
     area_km2 = sum(area_km2_list)                                   # add up area_km2 values for all polygons of one country
     dataset['area_km2'].append(area_km2)                            # store the area_km2 result in dataset
-
+    # Aggregate and store nr_dams per country
+    dataset['nr_dams'].append(nr_dams)  # store number of dams in dataset INFO#3
 print(dataset)
 
 
