@@ -166,25 +166,26 @@ print(dataset)
 
 # EXTRACT INFORMATION
 print("Extract information:")
-# Go through each country
+# Extract country data
 for country in country_list:
-    polyID = 1                                                      # for tracking
-    area_km2_list = []                                              # prepare for area_km2 data aggregation
-
-    # Check each polygon for the designated country
-    # initialize dam information storage
+    # Prepare data storage
+    polyID = 0                                                      # for tracking
+    area_km2_list = []
     nr_dams = 0
+    nr_roads = 0
+    roads_km_list = []
     keys_dams = ['DAM_NAME', 'YEAR', 'AREA_SKM', 'DEPTH_M', 'CATCH_SKM']
     values_dams = [[], [], [], [], []]
     dataset_dams = dict(zip(keys_dams, values_dams))
 
+    # Extract country data
+    # Build multipolygon representing country
     multipolygon = ogr.Geometry(ogr.wkbMultiPolygon)                # multipolygon to store all polygons of a country
     countries_lyr.ResetReading()                                    # before each use of loop on country_lyr
     polygon = countries_lyr.GetNextFeature()                        # loop through features
     while polygon:
-        # If designated country is found, extract information
+        # If designated country is found, extract information and build country multipolygon
         if polygon.GetField('NAME_0')== country:
-            #print("Country : ", country, "   Polygon #", polyID)    # for tracking
             area_km2_list.append(polygon.GetField('area_km2'))      # store area_km2 for data aggregation INFO#2
             polygon_geom = polygon.GetGeometryRef()                 # get geometry of polygon
             multipolygon.AddGeometry(polygon_geom)                  # add polygon to multipolygon (country)
@@ -193,7 +194,7 @@ for country in country_list:
 
     print("Country : ", country, "   Number of dissolved polygons : ", polyID)
 
-    # extract dams data per country (multipolygon)
+    # Extract dams data per country (multipolygon)
     dams_lyr.ResetReading()                                         # before each use of loop on dams_lyr
     point = dams_lyr.GetNextFeature()                               # loop through features
     while point:
@@ -210,6 +211,21 @@ for country in country_list:
         point = dams_lyr.GetNextFeature()
 
     print("Country : ", country, "   Number of damns", nr_dams,"\n")  # for tracking
+
+    # Extract roads data per country (multipolygon)
+    roads_lyr.ResetReading()                                            # before each use of loop on roads_lyr
+    line = roads_lyr.GetNextFeature()                                   # loop through features
+    while line:
+        # On-the-fly transformation of line geometry (roads) to match spatial reference of polygon data (countries)
+        line_geom = line.GetGeometryRef()
+        line_geom_trans = TransformGeometry(line_geom, countries_sr)
+        if multipolygon.Contains(line_geom_trans):
+            nr_roads += 1                                               # count number of roads INFO#19
+            roads_km_list.append(line.GetField('LENGTH_KM'))            # store roads_km for data aggregation INFO#16
+            print("yes")
+        line = roads_lyr.GetNextFeature()
+
+    print("Country : ", country, "   Number of damns", nr_roads, "\n")  # for tracking
 
     # AGGREGATE/CALCULATE RESULTS
     area_km2 = sum(area_km2_list)                                   # add up area_km2 values for all polygons of one country
@@ -232,37 +248,32 @@ for country in country_list:
         i_max_c = ((dataset_dams['CATCH_SKM']).index(max_catch_km2))  # get index of max_catch_km2
         Name_max_catch = dataset_dams['DAM_NAME'][i_max_c]         # Name_max_catch: name of the dam with the largest catchment INFO#15
     else:
-        yr_old = "--"
-        yr_young = "--"
-        name_young = "--"
-        av_reserv_km2 = "--"
-        max_reserv_km2 = "--"
-        Name_max_reserv = "--"
-        av_depth_reserv_m = "--"
-        max_depth_reserv_m = "--"
-        Name_max_reserv_m = "--"
-        max_catch_km2 = "--"
-        Name_max_catch = "--"
+        yr_old=yr_young=name_young=av_reserv_km2=max_reserv_km2=Name_max_reserv=av_depth_reserv_m=max_depth_reserv_m=Name_max_reserv_m=max_catch_km2=Name_max_catch="--"
 
-    print("Country : ", country, "   Dam info:\n", nr_dams, dataset_dams,"\n")  # for tracking
+    roads_km = sum(roads_km_list)                                   # add up roads_km values for all polygons of one country
+    #print("Country : ", country, "   Dam info:\n", nr_dams, dataset_dams,"\n")  # for tracking
 
 
     # STORE RESULTS
     dataset['country'].append(country)                              # store country name in dataset INFO#1
     dataset['area_km2'].append(area_km2)                            # store the area_km2 result in dataset INFO#2
     dataset['nr_dams'].append(nr_dams)                              # store number of dams in dataset INFO#3
-    dataset['yr_old'].append(yr_old)# yr_old: year of establishment of oldest dam INFO#4
-    dataset['name_old'].append(name_old)# name_old: name of oldest dam INFO#5
-    dataset['yr_young'].append(yr_young)# yr_young: year of establishment of youngest dam INFO#6
-    dataset['name_young'].append(name_young)# name_young: name of youngest dam INFO#7
-    dataset['av_reserv_km2'].append(av_reserv_km2)# av_reserv_km2: average reservoir size in km2 INFO#8
-    dataset['max_reserv_km2'].append(max_reserv_km2)# max_reserv_km2: maximum size of reservoir in km2 INFO#9
-    dataset['Name_max_reserv'].append(Name_max_reserv)# Name_max_reserv: name of the dam with largest reservoir INFO#10
-    dataset['av_depth_reserv_m'].append(av_depth_reserv_m)# av_depth_reserv_m: average depth of reservoirs in m INFO#11
-    dataset['max_depth_reserv_m'].append(max_depth_reserv_m)# max_depth_reserv_m: maximum depth of reservoirs in m INFO#12
-    dataset['Name_max_reserv_m'].append(Name_max_reserv_m)# Name_max_reserv: name of dam with deepest reservoir INFO#13
-    dataset['max_catch_km2'].append(max_catch_km2)# max_catch_km2: largest catchment in km2 INFO#14
-    dataset['Name_max_catch'].append(Name_max_catch)# Name_max_catch: name of the dam with the largest catchment INFO#15
+    dataset['yr_old'].append(yr_old)                                # yr_old: year of establishment of oldest dam INFO#4
+    dataset['name_old'].append(name_old)                            # name_old: name of oldest dam INFO#5
+    dataset['yr_young'].append(yr_young)                            # yr_young: year of establishment of youngest dam INFO#6
+    dataset['name_young'].append(name_young)                        # name_young: name of youngest dam INFO#7
+    dataset['av_reserv_km2'].append(av_reserv_km2)                  # av_reserv_km2: average reservoir size in km2 INFO#8
+    dataset['max_reserv_km2'].append(max_reserv_km2)                # max_reserv_km2: maximum size of reservoir in km2 INFO#9
+    dataset['Name_max_reserv'].append(Name_max_reserv)              # Name_max_reserv: name of the dam with largest reservoir INFO#10
+    dataset['av_depth_reserv_m'].append(av_depth_reserv_m)          # av_depth_reserv_m: average depth of reservoirs in m INFO#11
+    dataset['max_depth_reserv_m'].append(max_depth_reserv_m)        # max_depth_reserv_m: maximum depth of reservoirs in m INFO#12
+    dataset['Name_max_reserv_m'].append(Name_max_reserv_m)          # Name_max_reserv: name of dam with deepest reservoir INFO#13
+    dataset['max_catch_km2'].append(max_catch_km2)                  # max_catch_km2: largest catchment in km2 INFO#14
+    dataset['Name_max_catch'].append(Name_max_catch)                # Name_max_catch: name of the dam with the largest catchment INFO#15
+    dataset['roads_km'].append(roads_km)                            # roads_km: km of road per country INFO#16
+    ##dataset['road_dist_km'].append(road_dist_km)  # road_dist_km: mean distance to road in km INFO#17
+    ##dataset['max_road_dist'].append(max_road_dist)  # max_road_dist: max distance to road in km INFO#18
+    dataset['nr_roads'].append(nr_roads)                            # nr_roads: number of roads INFO#19
 
 print(dataset)
 
