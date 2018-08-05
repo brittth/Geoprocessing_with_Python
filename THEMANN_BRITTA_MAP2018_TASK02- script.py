@@ -1,36 +1,3 @@
-'''
-import sys
-try:
-    from osgeo import ogr, osr, gdal
-except:
-    sys.exit('ERROR: cannot find GDAL/OGR modules')
-
-# example GDAL error handler function
-def gdal_error_handler(err_class, err_num, err_msg):
-    errtype = {
-            gdal.CE_None:'None',
-            gdal.CE_Debug:'Debug',
-            gdal.CE_Warning:'Warning',
-            gdal.CE_Failure:'Failure',
-            gdal.CE_Fatal:'Fatal'
-    }
-    err_msg = err_msg.replace('\n',' ')
-    err_class = errtype.get(err_class, 'None')
-    print ('Error Number: %s' % (err_num))
-    print ('Error Type: %s' % (err_class))
-    print ('Error Message: %s' % (err_msg))
-
-if __name__=='__main__':
-
-    # install error handler
-    gdal.PushErrorHandler(gdal_error_handler)
-
-    # Raise a dummy error
-    gdal.Error(1, 2, 'test error')
-
-    #uninstall error handler
-    gdal.PopErrorHandler()
-'''
 # ####################################### LOAD REQUIRED LIBRARIES ############################################# #
 
 import time
@@ -80,13 +47,11 @@ roads_lyr = roads.GetLayer()
 roads_sr = roads_lyr.GetSpatialRef()
 
 
-# CHECK SPATIAL REFERENCE AND CREATE TRANSFORMATION RULES
-if str(countries_sr) == str(roads_sr) == str(dams_sr):  #only works with str in front
+# CHECK SPATIAL REFERENCE
+if str(countries_sr) == str(roads_sr) == str(dams_sr):
     print("All files share the same spatial reference. No transformation needed!\n")
 else:
     print("NOT all files share the same spatial reference. Transformation needed!\n")
-dams_trans = osr.CoordinateTransformation(countries_sr, dams_sr)    # transformation rule: countries --> dams
-roads_trans = osr.CoordinateTransformation(countries_sr,roads_sr)  # transformation rule: countries --> roads
 
 
 # PREPARE DATA DICTIONARY FOR SUMMARY DATASET
@@ -111,9 +76,8 @@ print("Extract information:")
 # Extract country data
 for country in country_list:
     # Prepare data storage
-    polyID = 0                                                      # for tracking
+    polyID = 0# for tracking
     area_km2_list = []
-    nr_roads = 0
     roads_km_list = []
     keys_dams = ['DAM_NAME', 'YEAR', 'AREA_SKM', 'DEPTH_M', 'CATCH_SKM']
     values_dams = [[], [], [], [], []]
@@ -132,12 +96,12 @@ for country in country_list:
             multipolygon.AddGeometry(polygon_geom)                  # add polygon to multipolygon (country)
             polyID += 1                                             # for tracking
         polygon = countries_lyr.GetNextFeature()
-
     print("Country : ", country, "   Number of dissolved polygons : ", polyID)
 
     # Extract dams data per country (multipolygon)
     # On-the-fly transformation of multipolygon geometry (country) to match spatial reference of point data (dams)
-    multipolygon.Transform(dams_trans)
+    dams_trans = osr.CoordinateTransformation(countries_sr, dams_sr)  # transformation rule: countries --> dams
+    multipolygon.Transform(dams_trans)                              # apply transformation to multipolygon
     dams_lyr.SetSpatialFilter(multipolygon)                         # reduce dams to country geometry (multipolygon)
     nr_dams = dams_lyr.GetFeatureCount()                            # count number of dams INFO#3
     dams_lyr.ResetReading()                                         # before each use of loop on dams_lyr
@@ -149,23 +113,21 @@ for country in country_list:
         dataset_dams['DEPTH_M'].append(point.GetField('DEPTH_M'))   # INFO#11,12
         dataset_dams['CATCH_SKM'].append(point.GetField('CATCH_SKM'))# INFO#13,14
         point = dams_lyr.GetNextFeature()
-    print("Country : ", country, "   Number of damns: ", nr_dams,"\n")  # for tracking
+    print("Country : ", country, "   Number of damns: ", nr_dams)  # for tracking
 
     # Extract roads data per country (multipolygon)
-    '''
+    # On-the-fly transformation of multipolygon geometry (country, now in dams_sr) to match spatial reference of line data (roads)
+    roads_trans = osr.CoordinateTransformation(dams_sr, roads_sr)  # transformation rule: dams --> roads
+    multipolygon.Transform(roads_trans)
+    roads_lyr.SetSpatialFilter(multipolygon)                         # reduce dams to country geometry (multipolygon)
+    nr_roads = roads_lyr.GetFeatureCount()                            # count number of road features INFO#19
     roads_lyr.ResetReading()                                            # before each use of loop on roads_lyr
     line = roads_lyr.GetNextFeature()                                   # loop through features
     while line:
-        # On-the-fly transformation of line geometry (roads) to match spatial reference of polygon data (countries)
-        line_geom = line.GetGeometryRef()
-        line_geom_trans = TransformGeometry(line_geom, countries_sr)
-        if multipolygon.Contains(line_geom_trans):
-            nr_roads += 1                                               # count number of roads INFO#19
-            roads_km_list.append(line.GetField('LENGTH_KM'))            # store roads_km for data aggregation INFO#16
+        roads_km_list.append(line.GetField('LENGTH_KM'))            # store roads_km for data aggregation INFO#16
         line = roads_lyr.GetNextFeature()
+    print("Country : ", country, "   Number of roads", nr_roads,"\n")  # for tracking
 
-    print("Country : ", country, "   Number of damns", nr_roads, "\n")  # for tracking
-    '''
     # AGGREGATE/CALCULATE RESULTS
     area_km2 = sum(area_km2_list)                                   # add up area_km2 values for all polygons of one country
     if nr_dams != 0:
@@ -189,8 +151,7 @@ for country in country_list:
     else:
         yr_old=yr_young=name_young=av_reserv_km2=max_reserv_km2=Name_max_reserv=av_depth_reserv_m=max_depth_reserv_m=Name_max_reserv_m=max_catch_km2=Name_max_catch="--"
 
-    #roads_km = sum(roads_km_list)                                   # add up roads_km values for all polygons of one country
-    #print("Country : ", country, "   Dam info:\n", nr_dams, dataset_dams,"\n")  # for tracking
+    roads_km = sum(roads_km_list)                                   # add up roads_km values for all polygons of one country
 
 
     # STORE RESULTS
@@ -209,18 +170,15 @@ for country in country_list:
     dataset['Name_max_reserv_m'].append(Name_max_reserv_m)          # Name_max_reserv: name of dam with deepest reservoir INFO#13
     dataset['max_catch_km2'].append(max_catch_km2)                  # max_catch_km2: largest catchment in km2 INFO#14
     dataset['Name_max_catch'].append(Name_max_catch)                # Name_max_catch: name of the dam with the largest catchment INFO#15
-    #dataset['roads_km'].append(roads_km)                            # roads_km: km of road per country INFO#16
+    dataset['roads_km'].append(roads_km)                            # roads_km: km of road per country INFO#16
     ##dataset['road_dist_km'].append(road_dist_km)  # road_dist_km: mean distance to road in km INFO#17
     ##dataset['max_road_dist'].append(max_road_dist)  # max_road_dist: max distance to road in km INFO#18
-    #dataset['nr_roads'].append(nr_roads)                            # nr_roads: number of roads INFO#19
+    dataset['nr_roads'].append(nr_roads)                            # nr_roads: number of roads INFO#19
 
+    #roads_lyr.SetSpatialFilter(None)
     #dams_lyr.SetSpatialFilter(None)
 print(dataset)
 
-
-# point_geom_trans.SetSpatialFilter(polygon_geom)
-# nr_dams_poly = point_geom_trans.GetFeatureCount()
-# print("Country : ", country, "   Polygon #", polyID, "   DamsPOLY #", nr_dams_poly)  # for tracking
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
 
 print("")
