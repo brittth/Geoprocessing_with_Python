@@ -105,14 +105,15 @@ for country in country_list:
     # Extract country data
     # Build multipolygon representing country
     multipolygon = ogr.Geometry(ogr.wkbMultiPolygon)                # multipolygon to store all polygons of a country
+    countries_lyr.SetAttributeFilter("NAME_0 = '"+str(country)+"'")
     countries_lyr.ResetReading()                                    # before each use of loop on country_lyr
     polygon = countries_lyr.GetNextFeature()                        # loop through features
     while polygon:
         # If designated country is found, extract information and build country multipolygon
-        if polygon.GetField('NAME_0')== country:
-            polygon_geom = polygon.GetGeometryRef()                 # get geometry of polygon
-            multipolygon.AddGeometry(polygon_geom)                  # add polygon to multipolygon (country)
-            polyID += 1                                             # for tracking
+        #if polygon.GetField('NAME_0')== country:
+        polygon_geom = polygon.GetGeometryRef()                 # get geometry of polygon
+        multipolygon.AddGeometry(polygon_geom)                  # add polygon to multipolygon (country)
+        polyID += 1                                             # for tracking
         polygon = countries_lyr.GetNextFeature()
 
     print("Country : ", country, "   Number of dissolved polygons : ", polyID)
