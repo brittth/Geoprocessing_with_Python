@@ -99,6 +99,7 @@ for country in country_list:
 
     # Extract dams data per country (multipolygon)
     # On-the-fly transformation of multipolygon geometry (country) to match spatial reference of point data (dams)
+    #multipolygon = TransformGeometry(multipolygon, dams_sr)        # doesn't work because geometry not attached
     dams_trans = osr.CoordinateTransformation(countries_sr, dams_sr)  # transformation rule: countries --> dams
     multipolygon.Transform(dams_trans)                              # apply transformation to multipolygon
     dams_lyr.SetSpatialFilter(multipolygon)                         # reduce dams to country geometry (multipolygon)
@@ -116,16 +117,32 @@ for country in country_list:
 
     # Extract roads data per country (multipolygon)
     # On-the-fly transformation of multipolygon geometry (country, now in dams_sr) to match spatial reference of line data (roads)
-    roads_trans = osr.CoordinateTransformation(dams_sr, roads_sr)  # transformation rule: dams --> roads
-    multipolygon.Transform(roads_trans)
+    multipolygon = TransformGeometry(multipolygon, roads_sr)
     roads_lyr.SetSpatialFilter(multipolygon)                         # reduce dams to country geometry (multipolygon)
     nr_roads = roads_lyr.GetFeatureCount()                            # count number of road features INFO#19
+
+    # Create multiline geometry with all roads of a country
+    multiline = ogr.Geometry(ogr.wkbMultiLineString)                # multiline to store all roads of a country
     roads_lyr.ResetReading()                                            # before each use of loop on roads_lyr
     line = roads_lyr.GetNextFeature()                                   # loop through features
-    while line:
-        roads_km_list.append(line.GetField('LENGTH_KM'))            # store roads_km for data aggregation INFO#16
-        line = roads_lyr.GetNextFeature()
-    print("Country : ", country, "   Number of roads", nr_roads,"\n")  # for tracking
+    while line:                                             # build multiline feature
+        #roads_km_list.append(line.GetField('LENGTH_KM'))   # ALTERNATIVE: roads_km for all road features in a country
+        line_geom = line.GetGeometryRef()                 # get geometry of line
+        multiline.AddGeometry(line_geom)                # add line to multiline (roads per country)
+        line = roads_lyr.GetNextFeature()               # loop through features
+
+    # Create intersection geometry of all roads in a country and the country border (border-crossing roads are cut off)
+    intersection_trans = osr.CoordinateTransformation(roads_sr, countries_sr)  # Length needs a projected coordinate system!!! -> countries_sr
+    # multipolygon = TransformGeometry(multipolygon, countries_sr)        # doesn't work because geometry not attached
+    # multiline = TransformGeometry(multiline, countries_sr)        # doesn't work because geometry not attached
+    multipolygon.Transform(intersection_trans)                                  # apply transformation
+    multiline.Transform(intersection_trans)                                     # apply transformation
+    intersection = multiline.Intersection(multipolygon)                         # intersect multiline (roads) with multipolygon (countries)
+    roads_km = intersection.Length()/1000                                       # countries_sr in m -> convert to km (ACTUAL LENGTH OF ROADS)
+
+    print("Country : ", country, "   Number of roads", nr_roads)  # for tracking
+    print("Country : ", country, "   Length of roads : ",roads_km,"\n")  # for tracking
+
 
     # AGGREGATE/CALCULATE RESULTS
     area_km2 = sum(area_km2_list)                                   # add up area_km2 values for all polygons of one country
@@ -150,7 +167,7 @@ for country in country_list:
     else:
         yr_old=yr_young=name_young=av_reserv_km2=max_reserv_km2=Name_max_reserv=av_depth_reserv_m=max_depth_reserv_m=Name_max_reserv_m=max_catch_km2=Name_max_catch="--"
 
-    roads_km = sum(roads_km_list)                                   # add up roads_km values for all polygons of one country
+    #roads_km = sum(roads_km_list)                                   # ALTERNATIVE: roads_km for all road features in a country
 
 
     # STORE RESULTS
