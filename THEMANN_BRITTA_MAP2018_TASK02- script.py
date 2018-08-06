@@ -32,6 +32,16 @@ def TransformGeometry(geometry, target_sref):
 rootFolder = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/MAP/Geoprocessing-in-python_MAP2018_data/Task02_data/"
 
 # ####################################### PROCESSING ########################################################## #
+# NOT NECESSARY BECAUSE ONLY ONE LOOP/FILTER USED
+# countries_lyr.ResetReading()  # before each use of loop on country_lyr
+# dams_lyr.ResetReading()        # before each use of loop on dams_lyr
+# roads_lyr.ResetReading()      # before each use of loop on roads_lyr
+# dams_lyr.SetSpatialFilter(None)
+# roads_lyr.SetSpatialFilter(None)
+
+# ROUNDING
+# km data rounded to m level --> 3rd decimal place
+# m data rounded to cm level --> 2nd decimal place
 
 # LOAD DATA FILES
 countries = ogr.Open(rootFolder + "ZonalShape_Countries_Europe_NUTS1_multipart.shp", 1)
@@ -56,143 +66,161 @@ else:
 
 # PREPARE DATA DICTIONARY FOR SUMMARY DATASET
 keys = ['country','area_km2','nr_dams','yr_old','name_old','yr_young','name_young','av_reserv_km2',
-        'max_reserv_km2','Name_max_reserv','av_depth_reserv_m','max_depth_reserv_m','Name_max_reserv_m',
-        'max_catch_km2','Name_max_catch','roads_km','roads_dist_km','max_road_dist','nr_roads']
+        'max_reserv_km2','Name_max_reserv','av_depth_reserv_m','max_depth_reserv_m','Name_max_depth',
+        'max_catch_km2','Name_max_catch','roads_km','road_dist_km','max_road_dist','nr_roads']
 values = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
 dataset = dict(zip(keys, values))
-#print(dataset)
 
 
 # PREPARE COUNTRY LIST FOR DATA AGGREGATION
-country_list = sorted(list(set([polygon.GetField('NAME_0') for polygon in countries_lyr])))
+country_list = sorted(list(set([polygon.GetField('NAME_0') for polygon in countries_lyr]))) #sorted to facilitate testing
 print("Country list: \n",country_list,"\n")
-
 country_list = country_list[0:3]    # for testing
 print(country_list)                 # for testing
 
 
 # EXTRACT INFORMATION
 print("Extract information:")
-# Extract country data
-for country in country_list:
+for country in country_list:        # Countries-INFO#1
     # Prepare data storage
-    polyID = 0# for tracking
+    polyID = 0                      # for tracking
     area_km2_list = []
-    roads_km_list = []
+    #roads_km_list = []             # ALTERNATIVE roads_km: roads_km for all road features in a country
     keys_dams = ['DAM_NAME', 'YEAR', 'AREA_SKM', 'DEPTH_M', 'CATCH_SKM']
     values_dams = [[], [], [], [], []]
     dataset_dams = dict(zip(keys_dams, values_dams))
 
-    # Extract country data
-    # Build multipolygon representing country
+
+    # Extract COUNTRY data
+    # Create multipolygon representing country
     multipolygon = ogr.Geometry(ogr.wkbMultiPolygon)                # multipolygon to store all polygons of a country
-    countries_lyr.SetAttributeFilter("NAME_0 = '"+str(country)+"'") # filter for designated country
-    countries_lyr.ResetReading()                                    # before each use of loop on country_lyr
+    countries_lyr.SetAttributeFilter("NAME_0 = '"+str(country)+"'") # filter for country
     polygon = countries_lyr.GetNextFeature()                        # loop through features
     while polygon:
-        area_km2_list.append(polygon.GetField('area_km2'))      # store area_km2 for data aggregation INFO#2
-        polygon_geom = polygon.GetGeometryRef()                 # get geometry of polygon
-        multipolygon.AddGeometry(polygon_geom)                  # add polygon to multipolygon (country)
-        polyID += 1                                             # for tracking
-        polygon = countries_lyr.GetNextFeature()
-    print("Country : ", country, "   Number of dissolved polygons : ", polyID)
+        area_km2_list.append(polygon.GetField('area_km2'))          # Countries-INFO#2: for data aggregation/calculation
+        polygon_geom = polygon.GetGeometryRef()                     # get geometry of polygon
+        multipolygon.AddGeometry(polygon_geom)                      # add polygon geometry to multipolygon (country)
+        polyID += 1                                                 # for tracking
+        polygon = countries_lyr.GetNextFeature()                    # loop through features
 
-    # Extract dams data per country (multipolygon)
+    print("Country : ", country, "   Number of dissolved polygons: ", polyID,".")
+
+
+    # Extract DAMS data per country (multipolygon)
     # On-the-fly transformation of multipolygon geometry (country) to match spatial reference of point data (dams)
-    #multipolygon = TransformGeometry(multipolygon, dams_sr)        # doesn't work because geometry not attached
-    dams_trans = osr.CoordinateTransformation(countries_sr, dams_sr)  # transformation rule: countries --> dams
+    #multipolygon = TransformGeometry(multipolygon, dams_sr)            # doesn't work because geometry not attached
+    dams_trans = osr.CoordinateTransformation(countries_sr, dams_sr)# transformation rule: countries --> dams
     multipolygon.Transform(dams_trans)                              # apply transformation to multipolygon
     dams_lyr.SetSpatialFilter(multipolygon)                         # reduce dams to country geometry (multipolygon)
-    nr_dams = dams_lyr.GetFeatureCount()                            # count number of dams INFO#3
-    dams_lyr.ResetReading()                                         # before each use of loop on dams_lyr
+    nr_dams = dams_lyr.GetFeatureCount()                            # Dams-INFO#1: count number of dam features
     point = dams_lyr.GetNextFeature()                               # loop through features
     while point:
-        dataset_dams['DAM_NAME'].append(point.GetField('DAM_NAME')) # INFO#5,7,10,13,15
-        dataset_dams['YEAR'].append(point.GetField('YEAR'))         # INFO#4,6
-        dataset_dams['AREA_SKM'].append(point.GetField('AREA_SKM')) # INFO#8,9
-        dataset_dams['DEPTH_M'].append(point.GetField('DEPTH_M'))   # INFO#11,12
-        dataset_dams['CATCH_SKM'].append(point.GetField('CATCH_SKM'))# INFO#13,14
-        point = dams_lyr.GetNextFeature()
-    print("Country : ", country, "   Number of damns: ", nr_dams)  # for tracking
+        # for data aggregation/calculation
+        dataset_dams['DAM_NAME'].append(point.GetField('DAM_NAME'))     # Dams-INFO#3,5,8,11,13
+        dataset_dams['YEAR'].append(point.GetField('YEAR'))             # Dams-INFO#2,4:
+        dataset_dams['AREA_SKM'].append(point.GetField('AREA_SKM'))     # Dams-INFO#6,7
+        dataset_dams['DEPTH_M'].append(point.GetField('DEPTH_M'))       # Dams-INFO#9,10,11
+        dataset_dams['CATCH_SKM'].append(point.GetField('CATCH_SKM'))   # Dams-INFO#12,13
+        point = dams_lyr.GetNextFeature()                               # loop through features
 
-    # Extract roads data per country (multipolygon)
+    print("Country : ", country, "   Information extracted from ", nr_dams," dams.")
+
+
+    # Extract ROADS data per country (multipolygon)
     # On-the-fly transformation of multipolygon geometry (country, now in dams_sr) to match spatial reference of line data (roads)
-    multipolygon = TransformGeometry(multipolygon, roads_sr)
-    roads_lyr.SetSpatialFilter(multipolygon)                         # reduce dams to country geometry (multipolygon)
-    nr_roads = roads_lyr.GetFeatureCount()                            # count number of road features INFO#19
+    multipolygon = TransformGeometry(multipolygon, roads_sr)    # transform geometry to road_sr
+    roads_lyr.SetSpatialFilter(multipolygon)                    # reduce dams to country geometry (multipolygon)
+    nr_roads = roads_lyr.GetFeatureCount()                      # Roads-INFO#4: count number of road features
 
     # Create multiline geometry with all roads of a country
-    multiline = ogr.Geometry(ogr.wkbMultiLineString)                # multiline to store all roads of a country
-    roads_lyr.ResetReading()                                            # before each use of loop on roads_lyr
-    line = roads_lyr.GetNextFeature()                                   # loop through features
-    while line:                                             # build multiline feature
-        #roads_km_list.append(line.GetField('LENGTH_KM'))   # ALTERNATIVE: roads_km for all road features in a country
-        line_geom = line.GetGeometryRef()                 # get geometry of line
-        multiline.AddGeometry(line_geom)                # add line to multiline (roads per country)
+    multiline = ogr.Geometry(ogr.wkbMultiLineString)    # multiline to store all roads of a country
+    line = roads_lyr.GetNextFeature()                   # loop through features
+    while line:                                         # create multiline feature
+        #roads_km_list.append(line.GetField('LENGTH_KM'))# ALTERNATIVE roads_km: roads_km for all road features in a country
+        line_geom = line.GetGeometryRef()               # get geometry of line
+        multiline.AddGeometry(line_geom)                # add line geometry to multiline (roads per country)
         line = roads_lyr.GetNextFeature()               # loop through features
 
     # Create intersection geometry of all roads in a country and the country border (border-crossing roads are cut off)
-    intersection_trans = osr.CoordinateTransformation(roads_sr, countries_sr)  # Length needs a projected coordinate system!!! -> countries_sr
-    # multipolygon = TransformGeometry(multipolygon, countries_sr)        # doesn't work because geometry not attached
-    # multiline = TransformGeometry(multiline, countries_sr)        # doesn't work because geometry not attached
-    multipolygon.Transform(intersection_trans)                                  # apply transformation
-    multiline.Transform(intersection_trans)                                     # apply transformation
-    intersection = multiline.Intersection(multipolygon)                         # intersect multiline (roads) with multipolygon (countries)
-    roads_km = intersection.Length()/1000                                       # countries_sr in m -> convert to km (ACTUAL LENGTH OF ROADS)
+    road_intersection_trans = osr.CoordinateTransformation(roads_sr, countries_sr)  # length needs a projected coordinate system obtain units!!! -> countries_sr
+    # multipolygon = TransformGeometry(multipolygon, countries_sr)                  # doesn't work because geometry not attached
+    # multiline = TransformGeometry(multiline, countries_sr)                        # doesn't work because geometry not attached
+    multipolygon.Transform(road_intersection_trans)                                 # apply transformation
+    multiline.Transform(road_intersection_trans)                                    # apply transformation
+    road_intersection = multiline.Intersection(multipolygon)                        # intersect multiline (roads) with multipolygon (country)
+    roads_km = round(road_intersection.Length()/1000,3)                             # Roads-INFO#1: actual length of roads rounded, countries_sr in m -> convert to km
 
-    print("Country : ", country, "   Number of roads", nr_roads)  # for tracking
-    print("Country : ", country, "   Length of roads : ",roads_km,"\n")  # for tracking
+    # Create grid of points across the country to find mean and max distance to nearest road
+    country_extent = multipolygon.GetEnvelope()
+    x,y,x_stop,y_stop = country_extent[0],country_extent[2],country_extent[1],country_extent[3]
+    multipoint = ogr.Geometry(ogr.wkbMultiPoint)  # create point class object MultiPoint -> multipoint grid
+    while x <= x_stop or y <= y_stop:
+        # create a geometry from coordinates
+        point = ogr.Geometry(ogr.wkbPoint)  # create point class object Point
+        point.AddPoint(x, y)                # add point coordinate
+        multipoint.AddGeometry(point)       # add point to multipoint grid
+        x += 100                            # next coordinates 100m east of the previous
+        y += 100                            # next coordinates 100m north of the previous
+    # Reduce multipoint grid covering country extent to country geometry (border outline)
+    grid_intersection = multipoint.Intersection(multipolygon)
+    # Get distances from each grid point to the closest road (multiline segment)
+    dist_list = []
+    for point in grid_intersection:
+        dist = point.Distance(multiline)
+        dist_list.append(dist)
+    road_dist_km = round(mean(dist_list)/1000,3)    # Roads-INFO#2
+    max_road_dist = round(max(dist_list)/1000,3)    # Roads-INFO#3
+
+    print("Country : ", country, "   Information extracted from ", nr_roads, " roads.")  # for tracking
 
 
-    # AGGREGATE/CALCULATE RESULTS
-    area_km2 = sum(area_km2_list)                                   # add up area_km2 values for all polygons of one country
-    if nr_dams != 0:
-        yr_old = min(dataset_dams['YEAR'])                          # yr_old: year of establishment of oldest dam INFO#4
-        i_old = ((dataset_dams['YEAR']).index(yr_old))              # get index of yr_old
-        name_old = dataset_dams['DAM_NAME'][i_old]                  # name_old: name of oldest dam INFO#5
-        yr_young = max(dataset_dams['YEAR'])                        # yr_young: year of establishment of youngest dam INFO#6
-        i_young = ((dataset_dams['YEAR']).index(yr_young))          # get index of yr_young
-        name_young = dataset_dams['DAM_NAME'][i_young]              # name_young: name of youngest dam INFO#7
-        av_reserv_km2 = mean(dataset_dams['AREA_SKM'])              # av_reserv_km2: average reservoir size in km2 INFO#8
-        max_reserv_km2 = max(dataset_dams['AREA_SKM'])              # max_reserv_km2: maximum size of reservoir in km2 INFO#9
-        i_max = ((dataset_dams['AREA_SKM']).index(max_reserv_km2))  # get index of max_reserv_km2
-        Name_max_reserv = dataset_dams['DAM_NAME'][i_max]           # Name_max_reserv: name of the dam with largest reservoir INFO#10
-        av_depth_reserv_m = mean(dataset_dams['DEPTH_M'])           # av_depth_reserv_m: average depth of reservoirs in m INFO#11
-        max_depth_reserv_m = max(dataset_dams['DEPTH_M'])           # max_depth_reserv_m: maximum depth of reservoirs in m INFO#12
-        i_max_d = ((dataset_dams['DEPTH_M']).index(max_depth_reserv_m))  # get index of max_depth_reserv_m
-        Name_max_reserv_m = dataset_dams['DAM_NAME'][i_max_d]         # Name_max_reserv: name of dam with deepest reservoir INFO#13
-        max_catch_km2 = max(dataset_dams['CATCH_SKM'])              # max_catch_km2: largest catchment in km2 INFO#14
-        i_max_c = ((dataset_dams['CATCH_SKM']).index(max_catch_km2))  # get index of max_catch_km2
-        Name_max_catch = dataset_dams['DAM_NAME'][i_max_c]         # Name_max_catch: name of the dam with the largest catchment INFO#15
+    # AGGREGATE/CALCULATE RESULTS (some rounded to decimal places for readability)
+    area_km2 = round(sum(area_km2_list),3)                                   # add up area_km2 values for all polygons of one country
+    if nr_dams != 0:                                                # if there is dam(s) located in the country
+        yr_old = min(dataset_dams['YEAR'])                              # Dams-INFO#2
+        i_old = ((dataset_dams['YEAR']).index(yr_old))                  # get index of yr_old
+        name_old = dataset_dams['DAM_NAME'][i_old]                      # Dams-INFO#3
+        yr_young = max(dataset_dams['YEAR'])                            # Dams-INFO#4
+        i_young = ((dataset_dams['YEAR']).index(yr_young))              # get index of yr_young
+        name_young = dataset_dams['DAM_NAME'][i_young]                  # Dams-INFO#5
+        av_reserv_km2 = mean(dataset_dams['AREA_SKM'])                  # Dams-INFO#6
+        max_reserv_km2 = max(dataset_dams['AREA_SKM'])                  # Dams-INFO#7
+        i_max = ((dataset_dams['AREA_SKM']).index(max_reserv_km2))      # get index of max_reserv_km2
+        Name_max_reserv = dataset_dams['DAM_NAME'][i_max]               # Dams-INFO#8
+        av_depth_reserv_m = round(mean(dataset_dams['DEPTH_M']),2)      # Dams-INFO#9
+        max_depth_reserv_m = max(dataset_dams['DEPTH_M'])               # Dams-INFO#10
+        i_max_d = ((dataset_dams['DEPTH_M']).index(max_depth_reserv_m)) # get index of max_depth_reserv_m
+        Name_max_depth = dataset_dams['DAM_NAME'][i_max_d]              # Dams-INFO#11
+        max_catch_km2 = max(dataset_dams['CATCH_SKM'])                  # Dams-INFO#12
+        i_max_c = ((dataset_dams['CATCH_SKM']).index(max_catch_km2))    # get index of max_catch_km2
+        Name_max_catch = dataset_dams['DAM_NAME'][i_max_c]              # Dams-INFO#13
     else:
         yr_old=yr_young=name_young=av_reserv_km2=max_reserv_km2=Name_max_reserv=av_depth_reserv_m=max_depth_reserv_m=Name_max_reserv_m=max_catch_km2=Name_max_catch="--"
-
-    #roads_km = sum(roads_km_list)                                   # ALTERNATIVE: roads_km for all road features in a country
+    #roads_km = sum(roads_km_list)                                   # ALTERNATIVE roads_km: roads_km for all road features in a country
 
 
     # STORE RESULTS
-    dataset['country'].append(country)                              # store country name in dataset INFO#1
-    dataset['area_km2'].append(area_km2)                            # store the area_km2 result in dataset INFO#2
-    dataset['nr_dams'].append(nr_dams)                              # store number of dams in dataset INFO#3
-    dataset['yr_old'].append(yr_old)                                # yr_old: year of establishment of oldest dam INFO#4
-    dataset['name_old'].append(name_old)                            # name_old: name of oldest dam INFO#5
-    dataset['yr_young'].append(yr_young)                            # yr_young: year of establishment of youngest dam INFO#6
-    dataset['name_young'].append(name_young)                        # name_young: name of youngest dam INFO#7
-    dataset['av_reserv_km2'].append(av_reserv_km2)                  # av_reserv_km2: average reservoir size in km2 INFO#8
-    dataset['max_reserv_km2'].append(max_reserv_km2)                # max_reserv_km2: maximum size of reservoir in km2 INFO#9
-    dataset['Name_max_reserv'].append(Name_max_reserv)              # Name_max_reserv: name of the dam with largest reservoir INFO#10
-    dataset['av_depth_reserv_m'].append(av_depth_reserv_m)          # av_depth_reserv_m: average depth of reservoirs in m INFO#11
-    dataset['max_depth_reserv_m'].append(max_depth_reserv_m)        # max_depth_reserv_m: maximum depth of reservoirs in m INFO#12
-    dataset['Name_max_reserv_m'].append(Name_max_reserv_m)          # Name_max_reserv: name of dam with deepest reservoir INFO#13
-    dataset['max_catch_km2'].append(max_catch_km2)                  # max_catch_km2: largest catchment in km2 INFO#14
-    dataset['Name_max_catch'].append(Name_max_catch)                # Name_max_catch: name of the dam with the largest catchment INFO#15
-    dataset['roads_km'].append(roads_km)                            # roads_km: km of road per country INFO#16
-    ##dataset['road_dist_km'].append(road_dist_km)  # road_dist_km: mean distance to road in km INFO#17
-    ##dataset['max_road_dist'].append(max_road_dist)  # max_road_dist: max distance to road in km INFO#18
-    dataset['nr_roads'].append(nr_roads)                            # nr_roads: number of roads INFO#19
+    dataset['country'].append(country)
+    dataset['area_km2'].append(area_km2)
+    dataset['nr_dams'].append(nr_dams)
+    dataset['yr_old'].append(yr_old)
+    dataset['name_old'].append(name_old)
+    dataset['yr_young'].append(yr_young)
+    dataset['name_young'].append(name_young)
+    dataset['av_reserv_km2'].append(av_reserv_km2)
+    dataset['max_reserv_km2'].append(max_reserv_km2)
+    dataset['Name_max_reserv'].append(Name_max_reserv)
+    dataset['av_depth_reserv_m'].append(av_depth_reserv_m)
+    dataset['max_depth_reserv_m'].append(max_depth_reserv_m)
+    dataset['Name_max_depth'].append(Name_max_depth)
+    dataset['max_catch_km2'].append(max_catch_km2)
+    dataset['Name_max_catch'].append(Name_max_catch)
+    dataset['roads_km'].append(roads_km)
+    dataset['road_dist_km'].append(road_dist_km)
+    dataset['max_road_dist'].append(max_road_dist)
+    dataset['nr_roads'].append(nr_roads)
 
-    #roads_lyr.SetSpatialFilter(None)
-    #dams_lyr.SetSpatialFilter(None)
+    print("Country : ", country, "   Information storage completed!\n")  # for tracking
 print(dataset)
 
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
