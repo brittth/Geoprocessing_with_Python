@@ -5,6 +5,8 @@ from osgeo import gdal, ogr, osr
 import pandas as pd
 from statistics import mean
 
+from BTheTools import BTv
+
 # ####################################### SET TIME-COUNT ###################################################### #
 
 starttime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
@@ -14,14 +16,8 @@ print("")
 
 # ####################################### FUNCTIONS ########################################################### #
 
-# TO BE PUT IN PACKAGE
-def TransformGeometry(geometry, target_sref):
-    #Returns cloned geometry, which is transformed to target spatial reference
-    geom_sref= geometry.GetSpatialReference()
-    transform = osr.CoordinateTransformation(geom_sref, target_sref)
-    geom_trans = geometry.Clone()
-    geom_trans.Transform(transform)
-    return geom_trans
+# see BTheTools package import
+# no other functions needed
 
 # ####################################### FOLDER PATHS & GLOBAL VARIABLES ##################################### #
 
@@ -76,8 +72,8 @@ dataset = pd.DataFrame(columns=['country','area_km2','nr_dams','yr_old','name_ol
 # PREPARE COUNTRY LIST FOR DATA AGGREGATION
 country_list = sorted(list(set([polygon.GetField('NAME_0') for polygon in countries_lyr]))) # 'sorted' facilitates testing
 print("Country list: \n",country_list,"\n")
-#country_list = [country_list[15],country_list[26]]    # for testing
-#print(country_list)                 # for testing
+country_list = [country_list[15],country_list[26]]    # for testing
+print(country_list)                 # for testing
 
 
 # EXTRACT INFORMATION
@@ -109,10 +105,10 @@ for country in country_list:    # Countries-INFO#1
 
 
     # Extract DAMS data per country (multipolygon)
-    multipolygon_d = TransformGeometry(multipolygon, dams_sr)   # transform multipolygon geometry to sr of dams layer
-    dams_lyr.SetSpatialFilter(multipolygon_d)                   # reduce dams to country geometry (multipolygon)
-    nr_dams = dams_lyr.GetFeatureCount()                        # Dams-INFO#1: count number of dam features
-    point = dams_lyr.GetNextFeature()                           # loop through features
+    multipolygon_d = BTv.TransformGeometry(multipolygon, dams_sr)   # transform multipolygon geometry to sr of dams layer
+    dams_lyr.SetSpatialFilter(multipolygon_d)                       # reduce dams to country geometry (multipolygon)
+    nr_dams = dams_lyr.GetFeatureCount()                            # Dams-INFO#1: count number of dam features
+    point = dams_lyr.GetNextFeature()                               # loop through features
     while point:
         # for data aggregation/calculation
         dataset_dams['DAM_NAME'].append(point.GetField('DAM_NAME'))     # Dams-INFO#3,5,8,11,13
@@ -126,9 +122,9 @@ for country in country_list:    # Countries-INFO#1
 
 
     # Extract ROADS data per country (multipolygon)
-    multipolygon_r = TransformGeometry(multipolygon, roads_sr)  # transform multipolygon geometry to sr of roads layer
-    roads_lyr.SetSpatialFilter(multipolygon_r)                  # reduce roads to country geometry (multipolygon)
-    nr_roads = roads_lyr.GetFeatureCount()                      # Roads-INFO#4
+    multipolygon_r = BTv.TransformGeometry(multipolygon, roads_sr)  # transform multipolygon geometry to sr of roads layer
+    roads_lyr.SetSpatialFilter(multipolygon_r)                      # reduce roads to country geometry (multipolygon)
+    nr_roads = roads_lyr.GetFeatureCount()                          # Roads-INFO#4
 
     # Create multiline geometry representing all roads of the country
     multiline = ogr.Geometry(ogr.wkbMultiLineString)    # to store all line features of a country
@@ -141,12 +137,12 @@ for country in country_list:    # Countries-INFO#1
     multiline.AssignSpatialReference(roads_sr)          # assign native sr (otherwise only sr shadow)
 
     # Cut off border-crossing roads at the country borders to get actual km of road per country (roads_km, approach 2)
-    multiline_c = TransformGeometry(multiline, countries_sr)    # transform multiline to projected CS with units (here:m)
-    road_intersection = multiline_c.Intersection(multipolygon)  # intersect multiline (roads) with multipolygon (country)
+    multiline_c = BTv.TransformGeometry(multiline, countries_sr)    # transform multiline to projected CS with units (here:m)
+    road_intersection = multiline_c.Intersection(multipolygon)      # intersect multiline (roads) with multipolygon (country)
     try:
-        roads_km = round(road_intersection.Length() / 1000, 3)  # Roads-INFO#1 : approach 2
+        roads_km = round(road_intersection.Length() / 1000, 3)      # Roads-INFO#1 : approach 2
     except AttributeError:
-        roads_km = round(sum(roads_km_list),3)                  # Roads-INFO#1 : approach 1
+        roads_km = round(sum(roads_km_list),3)                      # Roads-INFO#1 : approach 1
 
     # Create grid of points across the country to find mean and max distance to nearest road
 
