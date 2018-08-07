@@ -5,6 +5,7 @@ from osgeo import gdal, ogr, osr
 import pandas as pd
 from statistics import mean
 
+# https://github.com/brittth/Geoprocessing_with_Python
 from BTheTools import BTv
 
 # ####################################### SET TIME-COUNT ###################################################### #
@@ -72,8 +73,6 @@ dataset = pd.DataFrame(columns=['country','area_km2','nr_dams','yr_old','name_ol
 # PREPARE COUNTRY LIST FOR DATA AGGREGATION
 country_list = sorted(list(set([polygon.GetField('NAME_0') for polygon in countries_lyr]))) # 'sorted' facilitates testing
 print("Country list: \n",country_list,"\n")
-country_list = [country_list[15],country_list[26]]    # for testing
-print(country_list)                 # for testing
 
 
 # EXTRACT INFORMATION
