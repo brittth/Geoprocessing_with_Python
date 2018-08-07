@@ -96,8 +96,8 @@ coordTrans = osr.CoordinateTransformation(source_SR, target_SR)# transformation 
 
 # PREPARATION FOR POINT EXTRACTION
 # point id (each point) and unique point id (only stored point)
-ID = 0
-UID = 0
+ID = 1
+UID = 1
 
 # random points data frame preparation
 pnt_df = pd.DataFrame(columns=["UID", "X_COORD", "Y_COORD", "VCF"])
