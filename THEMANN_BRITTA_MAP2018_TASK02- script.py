@@ -34,15 +34,14 @@ rootFolder = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/MAP/
     # for higher accuracy approach 2 was used to calculate roads_km --> round(road_intersection.Length() / 1000, 3)
     # for countries with few/short roads, however, '.Length()' will throw an AttributeError
         # in these cases, approach 1 is used to calculate roads_km --> GetField('LENGTH_KM'),roads_km = sum(roads_km_list)
-        # no effect on accuracy, as it only concerns the Islands 'Guernsey' and 'Malta'
-        # where roads only leave country borders, where there are spatial inconsistencies between the two files
+        #   no effect on accuracy, as it only concerns the Islands 'Guernsey' and 'Malta'
+        #   where roads only leave country borders, where there are spatial inconsistencies between the two files
 # Rounding
     # km data rounded to m level --> 3rd decimal place
     # m data rounded to cm level --> 2nd decimal place
 # Grid
-    # The grid to calculate mean and max distance to road contains points every 200m in each direction.
-    # Less than 200m would take too much time to calculate, more than 200m would distort the results significantly
-    # for long and narrow countries, such as Malta. (7 instead of 10 km!)
+    # The grid to calculate mean and max distance to road contains points every 200m, 1km or 2km in each direction
+    #   depending on the country's area. It compromises between the script's running time and accuracy of the results.
 
 
 # LOAD DATA FILES
@@ -157,12 +156,23 @@ for country in country_list:    # Countries-INFO#1
     multipoint = ogr.Geometry(ogr.wkbMultiPoint)    # to store the grid points
     x_list = []
     y_list = []
+    area_km2 = round(sum(area_km2_list), 3)  # Countries-INFO#2
     while x <= x_stop:
         x_list.append(x)
-        x += 200            # next x coordinate 200m east of the previous
+        if area_km2 <= 3000:
+            x += 200    # next x coordinate 200m east of the previous
+        elif 3000 < area_km2 <= 200000:
+            x += 1000   # next x coordinate 1km east of the previous
+        else:
+            x += 2000   # next x coordinate 2km east of the previous
     while y <= y_stop:
         y_list.append(y)
-        y += 200            # next y coordinate 200m north of the previous
+        if area_km2 <= 3000:
+            y += 200    # next y coordinate 200m north of the previous
+        elif 3000 < area_km2 <= 200000:
+            y += 1000   # next y coordinate 1km north of the previous
+        else:
+            y += 2000   # next y coordinate 2km north of the previous
     point = ogr.Geometry(ogr.wkbPoint)              # create point class object Point
     for x_coord in x_list:
         for y_coord in y_list:
@@ -184,7 +194,7 @@ for country in country_list:    # Countries-INFO#1
 
 
     # AGGREGATE/CALCULATE RESULTS
-    area_km2 = round(sum(area_km2_list),3)  # Countries-INFO#2
+    #area_km2 = round(sum(area_km2_list),3)  # Countries-INFO#2
     if nr_dams != 0:                        # if there is/are dam(s) located in the country
         yr_old = min(dataset_dams['YEAR'])                              # Dams-INFO#2
         i_old = ((dataset_dams['YEAR']).index(yr_old))                  # get index of yr_old
