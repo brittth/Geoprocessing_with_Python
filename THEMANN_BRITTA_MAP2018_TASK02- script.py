@@ -5,7 +5,7 @@ from osgeo import gdal, ogr, osr
 import pandas as pd
 from statistics import mean
 
-# https://github.com/brittth/Geoprocessing_with_Python
+# https://github.com/brittth/Geoprocessing_with_Python/tree/master/BTheTools
 from BTheTools import BTv
 
 # ####################################### SET TIME-COUNT ###################################################### #
@@ -18,7 +18,7 @@ print("")
 # ####################################### FUNCTIONS ########################################################### #
 
 # see BTheTools package import
-# no other functions needed
+# no other functions needed (no repeating processes)
 
 # ####################################### FOLDER PATHS & GLOBAL VARIABLES ##################################### #
 
@@ -39,6 +39,10 @@ rootFolder = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/MAP/
 # Rounding
     # km data rounded to m level --> 3rd decimal place
     # m data rounded to cm level --> 2nd decimal place
+# Grid
+    # The grid to calculate mean and max distance to road contains points every 200m in each direction.
+    # Less than 200m would take too much time to calculate, more than 200m would distort the results significantly
+    # for long and narrow countries, such as Malta. (7 instead of 10 km!)
 
 
 # LOAD DATA FILES
@@ -151,13 +155,19 @@ for country in country_list:    # Countries-INFO#1
 
     # Create multipoint grid within country extent
     multipoint = ogr.Geometry(ogr.wkbMultiPoint)    # to store the grid points
-    while x <= x_stop or y <= y_stop:
-        # create a geometry from coordinates
-        point = ogr.Geometry(ogr.wkbPoint)  # create point class object Point
-        point.AddPoint(x,y)                 # add point coordinate
-        multipoint.AddGeometry(point)       # add point to multipoint grid
-        x += 100                            # next coordinate 100m east of the previous
-        y += 100                            # next coordinate 100m north of the previous
+    x_list = []
+    y_list = []
+    while x <= x_stop:
+        x_list.append(x)
+        x += 200            # next x coordinate 200m east of the previous
+    while y <= y_stop:
+        y_list.append(y)
+        y += 200            # next y coordinate 200m north of the previous
+    point = ogr.Geometry(ogr.wkbPoint)              # create point class object Point
+    for x_coord in x_list:
+        for y_coord in y_list:
+            point.AddPoint(x_coord, y_coord)    # add point coordinate
+            multipoint.AddGeometry(point)       # add point to multipoint grid
 
     # Reduce multipoint grid covering country extent to country borders (country geometry)
     grid_intersection = multipoint.Intersection(multipolygon)
@@ -165,7 +175,7 @@ for country in country_list:    # Countries-INFO#1
     # Get distances from each grid point to the closest road (multiline segment)
     dist_list = []
     for point in grid_intersection:
-        dist = point.Distance(multiline)            # get shortest distance from point to roads
+        dist = point.Distance(multiline_c)          # get shortest distance from point to roads
         dist_list.append(dist)                      # store distance in list
     road_dist_km = round(mean(dist_list) / 1000, 3) # Roads-INFO#2
     max_road_dist = round(max(dist_list) / 1000, 3) # Roads-INFO#3
