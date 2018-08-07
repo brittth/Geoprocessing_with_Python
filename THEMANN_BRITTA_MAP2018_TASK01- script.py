@@ -10,7 +10,7 @@ from shapely.geometry import Point
 import struct
 import random
 
-# https://github.com/brittth/Geoprocessing_with_Python
+# https://github.com/brittth/Geoprocessing_with_Python/tree/master/BTheTools
 from BTheTools import BTr
 
 # ####################################### SET TIME-COUNT ###################################################### #
