@@ -10,6 +10,9 @@ from shapely.geometry import Point
 import struct
 import random
 
+# https://github.com/brittth/Geoprocessing_with_Python
+from BTheTools import BTr
+
 # ####################################### SET TIME-COUNT ###################################################### #
 
 starttime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
@@ -18,35 +21,8 @@ print("Starting process, time: " + starttime)
 print("")
 
 # ####################################### FUNCTIONS ########################################################### #
-# TO BE PLACED IN PACKAGE
 
-#GetCoordinates --> get coordinates for multiple raster files
-    # input: list of paths to input files --> file_path_list
-    # UL --> Upper Left corner
-    # LR --> Lower Right corner
-def GetCoordinates(file_path_list):
-    UL_x_list = []
-    UL_y_list = []
-    LR_x_list = []
-    LR_y_list = []
-    counter = 0
-    for file_path in file_path_list:
-        ds = gdal.Open(file_path, gdal.GA_ReadOnly)
-        gt = ds.GetGeoTransform()  # UL_x, x-coordinate spatial resolution, UL_y, # y-coord. spat.res.
-        # Upper left
-        UL_x, UL_y = gt[0], gt[3]
-        # Lower right
-        LR_x = UL_x + (gt[1] * ds.RasterXSize)
-        LR_y = UL_y + (gt[5] * ds.RasterYSize)
-        UL_x_list.append(UL_x)
-        UL_y_list.append(UL_y)
-        LR_x_list.append(LR_x)
-        LR_y_list.append(LR_y)
-        #print("Coordinates of raster #" + str(counter) + ": " + "(" + str(UL_x) + "," + str(UL_y) + ") and (" + str(LR_x) + "," + str(LR_y) + ")")
-        counter += 1
-    return UL_x_list, UL_y_list, LR_x_list, LR_y_list
-
-# FUNCTIONS SPECIFIC TO THIS SCRIPT (to keep script short)
+# SCRIPT-SPECIFIC, not to be stored in package
 
 #storePoint --> store values extracted at random points in pandas dataframe
     # input1: OGR point geometry --> pnt
@@ -86,7 +62,7 @@ file_path_list_bsq_tif = [file for file in file_path_list_tiles if "bsq" in file
 
 # identify UL and LR corner coordinates of the area covered by the 4 tiles
 #print("\nExtracting corner coordinates of the 4 tiles:")
-UL_x_list, UL_y_list, LR_x_list, LR_y_list = GetCoordinates(file_path_list_bsq_tif)
+UL_x_list, UL_y_list, LR_x_list, LR_y_list = BTr.GetCoordinates(file_path_list_bsq_tif)
 UL_x = min(UL_x_list) # identical for each tile, since vertically aligned
 UL_y = max(UL_y_list)
 LR_x = max(LR_x_list) # identical for each tile, since vertically aligned
@@ -127,12 +103,12 @@ UID = 0
 pnt_df = pd.DataFrame(columns=["UID", "X_COORD", "Y_COORD", "VCF"])
 
 # create lists to store point information in
-pnt_list = []   # all stored points
-c0020 = []      # 0-20% stratum
-c2140 = []      # 21-40% stratum
-c4160 = []      # 41-60% stratum
-c6180 = []      # 61-80% stratum
-c80100 = []     # 81-100% stratum
+pnt_list = []       # all stored points
+c0020 = []          # 0-20% stratum
+c2140 = []          # 21-40% stratum
+c4160 = []          # 41-60% stratum
+c6180 = []          # 61-80% stratum
+c80100 = []         # 81-100% stratum
 feature_matrix = [] # x
 target_vector = []  # y
 
@@ -154,7 +130,7 @@ while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 1
 
     # identify in which tile the random point is located to skip raster files which do not cover point location
     for tile in tiles_sorted:                                       # go through file paths per tile
-        tile_UL_x_list, tile_UL_y_list, tile_LR_x_list, tile_LR_y_list = GetCoordinates(tile)
+        tile_UL_x_list, tile_UL_y_list, tile_LR_x_list, tile_LR_y_list = BTr.GetCoordinates(tile)
         if tile_UL_y_list[0] > y_random > tile_LR_y_list[0]:
             print("\nPoint located in tile #", tileID, "(tiles 0, 1, 2, 3)!")
 
@@ -181,6 +157,9 @@ while len(c0020) < 100 or len(c2140) < 100 or len(c4160) < 100 or len(c6180) < 1
 
                     # store band value in list
                     tileBand_values.append(tile_value)
+                    # to be stored in a desired 2D array: point x band-values of all rasters
+                    # if raster distinction were made, np.apply_along_axis() would be helpful to apply along raster-axis:
+                        #3D: point x raster x band-values --> 2D: point x band-values of all rasters
 
                     # console output to keep track
                     print("Tile #",tileID, "   Random Point #",ID, "   Raster #",rasterID, "   Number of bands: ",rb_count, "   Band",i, "   Extracted value: ",tile_value)
@@ -246,9 +225,9 @@ shp_df.to_file('THEMANN_BRITTA_MAP-task01_randomPoints.shp', driver='ESRI Shapef
 
 # STORE RANDOM POINTS WITH RASTER VALUES IN ARRAYS
 # Feature Matrix (x) --> classes
-arr_fm = np.asarray(feature_matrix)                                 # create arraay
+arr_fm = np.asarray(feature_matrix)                                 # create array
 print("\nFeature Matrix (x) shape: ",arr_fm.shape)                  #(500,68) --> 500 rows and 68 columns
-np.save("SURNAME_NAME_MAP-task01_np-array_x-values.npy", arr_fm)    # save array
+np.save("THEMANN_BRITTA_MAP-task01_np-array_x-values.npy", arr_fm)  # save array
 print(arr_fm)
 
 # Target Vector (y) --> classes
