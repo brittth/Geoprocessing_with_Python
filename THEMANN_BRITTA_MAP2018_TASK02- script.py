@@ -1,11 +1,7 @@
 # ####################################### LOAD REQUIRED LIBRARIES ############################################# #
 
 import time
-import os
 from osgeo import gdal, ogr, osr
-import numpy as np
-import struct
-import geopandas as gpd
 import pandas as pd
 from statistics import mean
 
@@ -33,9 +29,19 @@ rootFolder = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/MAP/
 
 # ####################################### PROCESSING ########################################################## #
 
-# ROUNDING NOTE FOR SUMMARY DATASET
-# km data rounded to m level --> 3rd decimal place
-# m data rounded to cm level --> 2nd decimal place
+# REMARKS
+# Error handling
+    # roads_km can be calculated using 2 approaches:
+        #1) for all road features in a country
+        #2) for all road segments within country borders, requires cutting off border-crossing roads outside borders
+    # for higher accuracy approach 2 was used to calculate roads_km --> round(road_intersection.Length() / 1000, 3)
+    # for countries with few/short roads, however, '.Length()' will throw an AttributeError
+        # in these cases, approach 1 is used to calculate roads_km --> GetField('LENGTH_KM'),roads_km = sum(roads_km_list)
+        # no effect on accuracy, as it only concerns the Islands 'Guernsey' and 'Malta'
+        # where roads only leave country borders, where there are spatial inconsistencies between the two files
+# Rounding
+    # km data rounded to m level --> 3rd decimal place
+    # m data rounded to cm level --> 2nd decimal place
 
 
 # LOAD DATA FILES
@@ -51,7 +57,7 @@ roads = ogr.Open(rootFolder + "gRoads-v1-Europe-sub.shp", 1)
 roads_lyr = roads.GetLayer()
 roads_sr = roads_lyr.GetSpatialRef() # native sr of multiline (roads per country)
 
-print("All files have been loaded!\n")    # for tracking
+print("All files have been loaded!\n")
 
 
 # CHECK SPATIAL REFERENCE
@@ -70,17 +76,17 @@ dataset = pd.DataFrame(columns=['country','area_km2','nr_dams','yr_old','name_ol
 # PREPARE COUNTRY LIST FOR DATA AGGREGATION
 country_list = sorted(list(set([polygon.GetField('NAME_0') for polygon in countries_lyr]))) # 'sorted' facilitates testing
 print("Country list: \n",country_list,"\n")
-country_list = country_list[27:]    # for testing
-print(country_list)                 # for testing
+#country_list = [country_list[15],country_list[26]]    # for testing
+#print(country_list)                 # for testing
 
 
 # EXTRACT INFORMATION
 print("Extract information:")
-for country in country_list:        # Countries-INFO#1
+for country in country_list:    # Countries-INFO#1
     # Prepare data storage
-    polyID = 0                      # for tracking
+    polyID = 0          # for tracking
     area_km2_list = []
-    roads_km_list = []             # ALTERNATIVE roads_km: roads_km for all road features in a country ONLY FOR GUERNSEY
+    roads_km_list = []  # for error handling: roads_km
     keys = ['DAM_NAME', 'YEAR', 'AREA_SKM', 'DEPTH_M', 'CATCH_SKM']
     values = [[], [], [], [], []]
     dataset_dams = dict(zip(keys, values))
@@ -128,18 +134,19 @@ for country in country_list:        # Countries-INFO#1
     multiline = ogr.Geometry(ogr.wkbMultiLineString)    # to store all line features of a country
     line = roads_lyr.GetNextFeature()                   # loop through features
     while line:
-        if country == 'Malta':
-            roads_km_list.append(line.GetField('LENGTH_KM'))# ALTERNATIVE roads_km: roads_km for all road features in a country
-        line_geom = line.GetGeometryRef()   # get geometry of line
-        multiline.AddGeometry(line_geom)    # add line geometry to multiline (roads per country)
-        line = roads_lyr.GetNextFeature()   # loop through features
+        roads_km_list.append(line.GetField('LENGTH_KM'))    # for error handling: roads_km
+        line_geom = line.GetGeometryRef()                   # get geometry of line
+        multiline.AddGeometry(line_geom)                    # add line geometry to multiline (roads per country)
+        line = roads_lyr.GetNextFeature()                   # loop through features
     multiline.AssignSpatialReference(roads_sr)          # assign native sr (otherwise only sr shadow)
 
-    # Cut off border-crossing roads at the country borders to get actual km of road per country (unlike ALTERNATIVE)
+    # Cut off border-crossing roads at the country borders to get actual km of road per country (roads_km, approach 2)
     multiline_c = TransformGeometry(multiline, countries_sr)    # transform multiline to projected CS with units (here:m)
     road_intersection = multiline_c.Intersection(multipolygon)  # intersect multiline (roads) with multipolygon (country)
-    if country != 'Malta':
-        roads_km = round(road_intersection.Length() / 1000, 3)      # Roads-INFO#1
+    try:
+        roads_km = round(road_intersection.Length() / 1000, 3)  # Roads-INFO#1 : approach 2
+    except AttributeError:
+        roads_km = round(sum(roads_km_list),3)                  # Roads-INFO#1 : approach 1
 
     # Create grid of points across the country to find mean and max distance to nearest road
 
@@ -168,10 +175,10 @@ for country in country_list:        # Countries-INFO#1
     road_dist_km = round(mean(dist_list) / 1000, 3) # Roads-INFO#2
     max_road_dist = round(max(dist_list) / 1000, 3) # Roads-INFO#3
 
-    print("Country : ", country, "   Information extracted from ", nr_roads, " roads.")  # for tracking
+    print("Country : ", country, "   Information extracted from ", nr_roads, " roads.")
 
 
-    # AGGREGATE/CALCULATE RESULTS (some rounded to decimal places for readability)
+    # AGGREGATE/CALCULATE RESULTS
     area_km2 = round(sum(area_km2_list),3)  # Countries-INFO#2
     if nr_dams != 0:                        # if there is/are dam(s) located in the country
         yr_old = min(dataset_dams['YEAR'])                              # Dams-INFO#2
@@ -193,8 +200,6 @@ for country in country_list:        # Countries-INFO#1
         Name_max_catch = dataset_dams['DAM_NAME'][i_max_c]              # Dams-INFO#13
     else:
         yr_old=name_old=yr_young=name_young=av_reserv_km2=max_reserv_km2=Name_max_reserv=av_depth_reserv_m=max_depth_reserv_m=Name_max_depth=max_catch_km2=Name_max_catch="-"
-    if country == 'Malta':           # Guernsey appears to have a projection inaccuracy and calc of actual length causes error
-        roads_km = sum(roads_km_list)   # ALTERNATIVE roads_km: roads_km for all road features in a country
 
 
     # STORE RESULTS
@@ -202,13 +207,13 @@ for country in country_list:        # Countries-INFO#1
                            Name_max_reserv,av_depth_reserv_m,max_depth_reserv_m,Name_max_depth,max_catch_km2,
                            Name_max_catch,roads_km,road_dist_km,max_road_dist,nr_roads]
 
-    print("Country : ", country, "   Information storage completed!\n") # for tracking
+    print("Country : ", country, "   Information storage completed!\n")
 
 print("Summary dataset:\n",dataset)
 
-# WRITE DATA FRAME TO CSV FILE
+# WRITE SUMMARY DATA FRAME TO CSV FILE
 dataset.to_csv("THEMANN_BRITTA_MAP-task02_dataset.csv", index=None, sep=',')
-print("\nThe summary dataset has been written to disc!\n")    # for tracking
+print("\nThe summary dataset has been written to disc!\n")
 
 # ####################################### END TIME-COUNT AND PRINT TIME STATS################################## #
 
