@@ -41,9 +41,25 @@ rootFolder = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/MAP/
     # km data rounded to m level --> 3rd decimal place
     # m data rounded to cm level --> 2nd decimal place
 # Grid
-    # To calculate mean and max distance to road a 100x100 grid of 10000 points is calculated per country.
-    # The spacing between the points, 99 in each direction, in calculated based on the country's area: sqrt(area)/99
+    # To calculate mean and max distance to road a 30x30 grid of 900 points is calculated per country.
+    # The spacing between the points, 29 in each direction, in calculated based on the country's area and converted to m:
+    # (sqrt(area)/ 29)*1000
     # This approach keeps the script's running time relatively low while preserving the accuracy of the results.
+    # Testing for sample countries of different sizes revealed the following:
+    #            area_km2  |test grid_spacing_m|grid_spacing_m|diff norm road_dist_km*10000 |diff norm max_road_dist*10000
+    # Guernsey   88.45     |         200       |    324       |         18.8805101 (-)      |   1.6958542   (+)
+    # Kosovo     10919.81  |         500       |    3603      |         0.0036631  (+)      |   0.2591620   (-)
+    # Bulgaria   111587.68 |         2000      |    11518     |         0.0006273  (-)      |   0.3898280   (-)
+    # Sweden     450047.26 |         5000      |    23133     |         0.0031330  (+)      |   0.1377855   (-)
+    #   OBSERVATIONS:
+        # The largest deviations relative to the country's area can be abserved with the smallest country, Guernsey,
+        #   an island, whose non-rectangular shape might be responsible for the elimination of many grid points when
+        #   intersectedwith country borders.
+        # Max_dist_road is, as to be expected, largely underestimated.
+    #   CONCLUSION:
+        # Non-rectangular countries may have smaller sampling numbers increasing the uncertainty of the result.
+        # max_road_dist values may be underestimated due to missed points with larger values.
+        # max_road_dist may be biased towards smaller or larger values in countries with a grid-like road network.
 
 
 # LOAD DATA FILES
@@ -78,9 +94,6 @@ dataset = pd.DataFrame(columns=['country','area_km2','nr_dams','yr_old','name_ol
 # PREPARE COUNTRY LIST FOR DATA AGGREGATION
 country_list = sorted(list(set([polygon.GetField('NAME_0') for polygon in countries_lyr]))) # 'sorted' facilitates testing
 print("Country list: \n",country_list,"\n")
-#country_list = [country_list[15], country_list[21],country_list[6],  country_list[38]]
-country_list = country_list[15:16]
-#print(country_list)
 
 
 # EXTRACT INFORMATION
@@ -161,35 +174,15 @@ for country in country_list:    # Countries-INFO#1
     multipoint = ogr.Geometry(ogr.wkbMultiPoint)    # to store the grid points
     x_list = []
     y_list = []
-    area_km2 = round(sum(area_km2_list), 3)  # Countries-INFO#2
+    area_km2 = round(sum(area_km2_list), 3)         # Countries-INFO#2, already calculated here for to build grid
+    grid_spacing = ((m.sqrt(area_km2) / 29)*1000)   # calculate spacing in m between grid points to achieve 30x30 grid
+    print("Country : ", country, "   Building a grid with ~",int(grid_spacing),"m between each grid point.")
     while x <= x_stop:
         x_list.append(x)
-        # if area_km2 <= 3000:
-        #     x += 200    # next x coordinate 200m east of the previous
-        # elif 3000 < area_km2 <= 50000:
-        #     x += 4000   # next x coordinate 1km east of the previous
-        # elif 50000 < area_km2 <= 200000:
-        #     x += 6000   # next x coordinate 2km east of the previous
-        # elif 200000 <area_km2 <= 400000:
-        #     x += 8000
-        # else:
-        #     x += 10000
-        #formula sqrt(area)/100
-        x += ((m.sqrt(area_km2) / 9)*1000) # *1000 to convert from km to m
-        #print((m.sqrt(area_km2) / 49)*1000)
+        x += grid_spacing   # next x coordinate x m east of the previous
     while y <= y_stop:
         y_list.append(y)
-        # if area_km2 <= 3000:
-        #     y += 200    # next y coordinate 200m north of the previous
-        # elif 3000 < area_km2 <= 50000:
-        #     y += 4000   # next x coordinate 1km north of the previous
-        # elif 50000 < area_km2 <= 200000:
-        #     y += 6000   # next x coordinate 2km north of the previous
-        # elif 200000 <area_km2 <= 400000:
-        #     y += 8000
-        # else:
-        #     y += 10000
-        y += (m.sqrt(area_km2) / 9)
+        y += grid_spacing   # next y coordinate y m north of the previous
     point = ogr.Geometry(ogr.wkbPoint)              # create point class object Point
     for x_coord in x_list:
         for y_coord in y_list:
@@ -211,7 +204,7 @@ for country in country_list:    # Countries-INFO#1
 
 
     # AGGREGATE/CALCULATE RESULTS
-    #area_km2 = round(sum(area_km2_list),3)  # Countries-INFO#2
+    #area_km2 = round(sum(area_km2_list),3)  # Countries-INFO#2, already needed to calculate grid spacing
     if nr_dams != 0:                        # if there is/are dam(s) located in the country
         yr_old = min(dataset_dams['YEAR'])                              # Dams-INFO#2
         i_old = ((dataset_dams['YEAR']).index(yr_old))                  # get index of yr_old
