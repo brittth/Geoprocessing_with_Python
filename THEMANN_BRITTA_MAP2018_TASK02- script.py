@@ -1,33 +1,5 @@
-# ####################################### LOAD REQUIRED LIBRARIES ############################################# #
+# ####################################### REMARKS ########################################################## #
 
-import time
-from osgeo import gdal, ogr, osr
-import pandas as pd
-from statistics import mean
-import math as m
-
-# https://github.com/brittth/Geoprocessing_with_Python/tree/master/BTheTools
-from BTheTools import BTv
-
-# ####################################### SET TIME-COUNT ###################################################### #
-
-starttime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
-print("--------------------------------------------------------")
-print("Starting process, time: " + starttime)
-print("")
-
-# ####################################### FUNCTIONS ########################################################### #
-
-# see BTheTools package import
-# no other functions needed (no repeating processes)
-
-# ####################################### FOLDER PATHS & GLOBAL VARIABLES ##################################### #
-
-rootFolder = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/MAP/Geoprocessing-in-python_MAP2018_data/Task02_data/"
-
-# ####################################### PROCESSING ########################################################## #
-
-# REMARKS
 # Error handling
     # roads_km can be calculated using 2 approaches:
         #1) for all road features in a country
@@ -61,6 +33,34 @@ rootFolder = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/MAP/
         # max_road_dist values may be underestimated due to missed points with larger values.
         # max_road_dist may be biased towards smaller or larger values in countries with a grid-like road network.
 
+# ####################################### LOAD REQUIRED LIBRARIES ############################################# #
+
+import time
+from osgeo import gdal, ogr, osr
+import pandas as pd
+from statistics import mean
+import math as m
+
+# https://github.com/brittth/Geoprocessing_with_Python/tree/master/BTheTools
+from BTheTools import BTv
+
+# ####################################### SET TIME-COUNT ###################################################### #
+
+starttime = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
+print("--------------------------------------------------------")
+print("Starting process, time: " + starttime)
+print("")
+
+# ####################################### FUNCTIONS ########################################################### #
+
+# see BTheTools package import
+# no other functions needed (no repeating processes)
+
+# ####################################### FOLDER PATHS & GLOBAL VARIABLES ##################################### #
+
+rootFolder = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/MAP/Geoprocessing-in-python_MAP2018_data/Task02_data/"
+
+# ####################################### PROCESSING ########################################################## #
 
 # LOAD DATA FILES
 countries = ogr.Open(rootFolder + "ZonalShape_Countries_Europe_NUTS1_multipart.shp", 1)
