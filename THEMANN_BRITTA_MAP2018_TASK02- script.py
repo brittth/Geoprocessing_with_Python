@@ -4,6 +4,7 @@ import time
 from osgeo import gdal, ogr, osr
 import pandas as pd
 from statistics import mean
+import math as m
 
 # https://github.com/brittth/Geoprocessing_with_Python/tree/master/BTheTools
 from BTheTools import BTv
@@ -40,8 +41,9 @@ rootFolder = "D:/Britta/Documents/HU Berlin/SS 18/Geoprocessing with Python/MAP/
     # km data rounded to m level --> 3rd decimal place
     # m data rounded to cm level --> 2nd decimal place
 # Grid
-    # The grid to calculate mean and max distance to road contains points every 200m, 1km or 2km in each direction
-    #   depending on the country's area. It compromises between the script's running time and accuracy of the results.
+    # To calculate mean and max distance to road a 100x100 grid of 10000 points is calculated per country.
+    # The spacing between the points, 99 in each direction, in calculated based on the country's area: sqrt(area)/99
+    # This approach keeps the script's running time relatively low while preserving the accuracy of the results.
 
 
 # LOAD DATA FILES
@@ -76,6 +78,9 @@ dataset = pd.DataFrame(columns=['country','area_km2','nr_dams','yr_old','name_ol
 # PREPARE COUNTRY LIST FOR DATA AGGREGATION
 country_list = sorted(list(set([polygon.GetField('NAME_0') for polygon in countries_lyr]))) # 'sorted' facilitates testing
 print("Country list: \n",country_list,"\n")
+#country_list = [country_list[15], country_list[21],country_list[6],  country_list[38]]
+country_list = country_list[15:16]
+#print(country_list)
 
 
 # EXTRACT INFORMATION
@@ -159,20 +164,32 @@ for country in country_list:    # Countries-INFO#1
     area_km2 = round(sum(area_km2_list), 3)  # Countries-INFO#2
     while x <= x_stop:
         x_list.append(x)
-        if area_km2 <= 3000:
-            x += 200    # next x coordinate 200m east of the previous
-        elif 3000 < area_km2 <= 200000:
-            x += 1000   # next x coordinate 1km east of the previous
-        else:
-            x += 2000   # next x coordinate 2km east of the previous
+        # if area_km2 <= 3000:
+        #     x += 200    # next x coordinate 200m east of the previous
+        # elif 3000 < area_km2 <= 50000:
+        #     x += 4000   # next x coordinate 1km east of the previous
+        # elif 50000 < area_km2 <= 200000:
+        #     x += 6000   # next x coordinate 2km east of the previous
+        # elif 200000 <area_km2 <= 400000:
+        #     x += 8000
+        # else:
+        #     x += 10000
+        #formula sqrt(area)/100
+        x += ((m.sqrt(area_km2) / 9)*1000) # *1000 to convert from km to m
+        #print((m.sqrt(area_km2) / 49)*1000)
     while y <= y_stop:
         y_list.append(y)
-        if area_km2 <= 3000:
-            y += 200    # next y coordinate 200m north of the previous
-        elif 3000 < area_km2 <= 200000:
-            y += 1000   # next y coordinate 1km north of the previous
-        else:
-            y += 2000   # next y coordinate 2km north of the previous
+        # if area_km2 <= 3000:
+        #     y += 200    # next y coordinate 200m north of the previous
+        # elif 3000 < area_km2 <= 50000:
+        #     y += 4000   # next x coordinate 1km north of the previous
+        # elif 50000 < area_km2 <= 200000:
+        #     y += 6000   # next x coordinate 2km north of the previous
+        # elif 200000 <area_km2 <= 400000:
+        #     y += 8000
+        # else:
+        #     y += 10000
+        y += (m.sqrt(area_km2) / 9)
     point = ogr.Geometry(ogr.wkbPoint)              # create point class object Point
     for x_coord in x_list:
         for y_coord in y_list:
