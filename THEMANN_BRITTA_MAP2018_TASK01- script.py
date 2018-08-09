@@ -26,7 +26,7 @@ print("")
 
 #storePoint --> store values extracted at random points in pandas dataframe
     # input1: OGR point geometry --> pnt
-    # input2: unique id to label the point in list--> UID
+    # input2: unique id to label the point in list --> UID
 def storePoint(pnt,UID):
     pnt_list.append(pnt)                                    # append point to point list
     feature_matrix.append(tileBand_values)                  # append tile band values to feature matrix list
